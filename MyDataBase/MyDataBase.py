@@ -10,8 +10,6 @@ import pandas as pd
 import shutil
 # ===================================================================================
 ## @brief Excelのデータを管理するクラス
-# @note
-# 現状列の定義はExcel上でしか行えない
 class MyDataBase():
     ## @brief 初期化処理
     @mylogger.deco
@@ -80,7 +78,7 @@ class MyDataBase():
     def DFAppendRow(self, row):
         # サイズが一致しない場合、仮の列名を追加
         while len(row) != len(self.GetColumns()):
-            self.DFAppendColumn('UnknownColumn'+str(len(self.df.columns)))
+            self.DFAppendColumn(['UnknownColumn'+str(len(self.df.columns))])
         # 行追加
         dt = datetime.datetime.now()
         temp = {'timestamp/date':dt.strftime("%Y/%m/%d"),
@@ -91,8 +89,12 @@ class MyDataBase():
 # ===================================================================================
     ## @brief データフレームに列を追加
     @mylogger.deco
-    def DFAppendColumn(self, column, value=''):
-        self.df.insert(len(self.df.columns), column, value)
+    def DFAppendColumn(self, columns, value=''):
+        for column in columns:
+            if not column in self.df.columns:
+                self.df.insert(len(self.df.columns), column, value)
+            else:
+                mylogger.warning('column ', column, ' is already exist')
 # ===================================================================================
     ## @brief データフレームを辞書型に変換して取得
     # @note
@@ -141,6 +143,7 @@ class MyDataBase():
 # ===================================================================================
 if __name__ == '__main__':
     db = MyDataBase('todo.xlsx')
+    db.DFAppendColumn(['project', 'task', 'memo'])
     db.DFAppendRow(['プロジェクトX','洗濯','柔軟剤が少ない'])
     db.DFAppendRow(['プロジェクトX','家事','カレー'])
     db.DFAppendRow(['プロジェクトY','会議','ABC会議室'])
