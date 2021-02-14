@@ -1,0 +1,57 @@
+<html>
+<head>
+  <title>BrowserLogging</title>
+  <style type="text/css">
+    <!--
+    .asctime {color:green;}
+    .levelname {color:black;font-weight:bold;width:40px;display:inline-block;}
+    .funcName {font-weight:bold;width:60px;display:inline-block;font-size:12px;}
+    .CRITICAL {color:red;font-weight:bold;}
+    .ERROR {color:red;}
+    .SUCCESS {color:green;font-weight:bold;}
+    .WARNING {color:yellow;}
+    .NOTICE {color:magenta;}
+    .INFO {}
+    .VERBOSE {color:blue;}
+    .DEBUG {color:green;}
+    .SPAM {color:cyan;}
+    -->
+  </style>
+</head>
+<body>
+  <canvas id="screenshot" style="height:50%;" width="2880" height="1920"></canvas>
+  <input type="checkbox" id="scrollsetting" checked>自動スクロール
+  <div id="log" style="overflow:scroll;top:50%;height:50%;font-size:6px;"></div>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script type="text/javascript">
+    function loop() {
+      var ws_log = new WebSocket("ws://" + location.hostname + ":" + location.port + "/updateLog");
+      ws_log.binaryType = 'arraybuffer';
+      ws_log.onmessage = function(msg) {
+        var current = JSON.parse(msg.data);
+        /* $('#log').empty(); */
+        current["data"].forEach((value,index,array) => {
+            $('#log').append(value);
+        });
+        if ($('#scrollsetting').prop('checked')){
+          $('#log').animate({ scrollTop: $('#log')[0].scrollHeight}, 2000);
+        }
+      };
+      var ws_screenshot = new WebSocket("ws://" + location.hostname + ":" + location.port + "/updateScreenshot");
+      ws_screenshot.binaryType = 'arraybuffer';
+      ws_screenshot.onmessage = function(msg) {
+        var ImageData_in = new Uint8Array(msg.data);
+        var ctx = $('#screenshot')[0].getContext('2d');
+        var ImageData_out = ctx.createImageData(2880, 1920);
+        /* for (var i=0; i < ImageData_in.length; i++){ */
+        for (var i=0; i < ImageData_out.data.length; i++){
+          ImageData_out.data[i] = ImageData_in[i];
+        }
+        ctx.putImageData(ImageData_out, 0, 0);
+      };
+    }
+    loop();
+    setInterval(loop, 3000);
+  </script>
+</body>
+</html>

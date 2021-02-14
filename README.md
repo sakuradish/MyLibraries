@@ -1,2 +1,3 @@
-# MyDataBase
-Excelのデータを操作するためのスクリプト
+# MyLibraries
+- MyDataBase
+- MyLogger
