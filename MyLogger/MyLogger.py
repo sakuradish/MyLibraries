@@ -80,15 +80,20 @@ class mylogger:
         self.stack = {}
         self.stacklevel = 0
 # ===================================================================================
+    ## @brief BrowserLogging開始
+    # @note
+    # スレッド化しようと思ったけど、Errorが出たので後回し
+    # 雑にos.systemからpythonを起動
+    def StartBrowserLogging(self):
+        basedir = os.path.dirname(os.path.abspath(__file__))
+        os.system('start ' + basedir + '/BrowserLogging/BrowserLogging.py')
+        self.info('start BrowserLogging')
+# ===================================================================================
     ## @brief インスタンス取得
     # @note
     # ログレベルは最初に呼ばれた時のもので統一される
     @classmethod
-    def GetInstance(cls, level='DEBUG', browser=False):
-        # BrowserLogging
-        if browser:
-            os.system('start ' + basedir + '/BrowserLogging/BrowserLogging.py')
-            self.info('start BrowserLogging')
+    def GetInstance(cls, level='DEBUG'):
         if not hasattr(cls, 'this_'):
             cls.this_ = cls(level=level)
         return cls.this_
@@ -223,7 +228,8 @@ class mylogger:
         self.origin_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
 # ===================================================================================
 if __name__ == '__main__':
-    mylogger = mylogger('DEBUG')
+    mylogger = mylogger.GetInstance('DEBUG')
+    mylogger.StartBrowserLogging()
     @mylogger.decomemo
     def test():
         mylogger.critical('This is CRITICAL. (50)')
