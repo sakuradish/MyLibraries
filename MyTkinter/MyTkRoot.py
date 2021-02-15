@@ -90,6 +90,7 @@ class MyTkRoot(tk.Tk):
     ## @brief キーボードイベント受け取り時の処理
     @mylogger.deco
     def OnKeyEvent(self, event):
+        mylogger.info(event)
         # Ctrl+数字ならフレームの表示をトグル
         if event.keysym.isdecimal() and len(self.idtable) >= int(event.keysym)-1:
             self.ToggleFrameVisibility(self.idtable[int(event.keysym)-1])
@@ -104,6 +105,7 @@ class MyTkRoot(tk.Tk):
     ## @brief マウスイベント受け取り時の処理
     @mylogger.deco
     def OnMouseEvent(self, event):
+        mylogger.info(event)
         # 登録されているコールバックを呼び出す
         if self.isMouseEventProcessing == False:
             self.isMouseEventProcessing = True

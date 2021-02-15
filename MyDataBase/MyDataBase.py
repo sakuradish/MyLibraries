@@ -73,6 +73,11 @@ class MyDataBase():
     def DFSort(self, column, ascending=True):
         self.df = self.df.sort_values(by=[column], ascending=ascending)
 # ===================================================================================
+    ## @brief データフレームを指定列と値でフィルタ
+    @mylogger.deco
+    def DFFilter(self, column, value):
+        self.df = self.df[self.df[column].str.contains(value)]
+# ===================================================================================
     ## @brief データフレームに行を追加
     @mylogger.deco
     def DFAppendRow(self, row):
@@ -95,6 +100,12 @@ class MyDataBase():
                 self.df.insert(len(self.df.columns), column, value)
             else:
                 mylogger.warning('column ', column, ' is already exist')
+        self.DFWrite()
+# ===================================================================================
+    ## @brief 指定列だけ取り出し
+    @mylogger.deco
+    def GetListByColumn(self, column):
+        return self.df.loc[:,column].values.tolist()
 # ===================================================================================
     ## @brief データフレームを辞書型に変換して取得
     # @note
@@ -142,17 +153,17 @@ class MyDataBase():
         return self.df.to_html(index=False)
 # ===================================================================================
 if __name__ == '__main__':
-    db = MyDataBase('todo.xlsx')
-    db.DFAppendColumn(['project', 'task', 'memo'])
-    db.DFAppendRow(['プロジェクトX','洗濯','柔軟剤が少ない'])
-    db.DFAppendRow(['プロジェクトX','家事','カレー'])
-    db.DFAppendRow(['プロジェクトY','会議','ABC会議室'])
-    db.DFAppendRow(['プロジェクトY','営業','DEF株式会社'])
+    db = MyDataBase('task.xlsx')
+    db.DFAppendColumn(['project', 'task', 'status'])
+    db.DFAppendRow(['プロジェクトX','洗濯','OPEN'])
+    db.DFAppendRow(['プロジェクトX','家事','DOING'])
+    db.DFAppendRow(['プロジェクトY','会議','DONE'])
+    db.DFAppendRow(['プロジェクトY','営業','OPEN'])
     mylogger.success(db.GetColumns())
     mylogger.success(db.GetDict())
     mylogger.success(db.GetStr())
     mylogger.success(db.GetHTML())
-    db.DFSort('memo', ascending=False)
+    db.DFSort('status', ascending=False)
     db.DFDropDuplicates('project')
     db.DFWrite()
     input('press any key ...')
