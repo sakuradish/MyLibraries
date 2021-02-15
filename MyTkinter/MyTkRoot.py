@@ -29,8 +29,8 @@ class MyTkRoot(tk.Tk):
         length = len(self.frames)
         # トグルボタン配置
         button = tk.Button(self, text=id)
-        button.bind("<Button-1>", self.OnToggleButtonPressed)
-        button.bind("<Return>", self.OnToggleButtonPressed)
+        button.bind("<Button-1>", self.__OnToggleButtonPressed)
+        button.bind("<Return>", self.__OnToggleButtonPressed)
         button.place(relwidth=0.1, relx=length*0.1)
         # フレーム登録
         self.idtable[length] = id
@@ -40,11 +40,11 @@ class MyTkRoot(tk.Tk):
         else:
             self.frames[id] = {'frame':frame, 'visibility':False, 'button':button, 'OnKeyEvent':key, 'OnMouseEvent':mouse}
             self.frames[id]['button'].configure(bg='gray')
-        self.DrawFrames()
+        self.__DrawFrames()
 # ===================================================================================
     ## @brief フレームを描画
     @mylogger.deco
-    def DrawFrames(self):
+    def __DrawFrames(self):
         # 表示状態のFrameのみ抽出
         visibleFrames = []
         for frame in self.frames.values():
@@ -73,19 +73,19 @@ class MyTkRoot(tk.Tk):
 # ===================================================================================
     ## @brief トグルボタン押下時の処理
     @mylogger.deco
-    def OnToggleButtonPressed(self, event):
-        self.ToggleFrameVisibility(event.widget["text"])
+    def __OnToggleButtonPressed(self, event):
+        self.__ToggleFrameVisibility(event.widget["text"])
 # ===================================================================================
     ## @brief Frameの表示状態をトグルさせる
     @mylogger.deco
-    def ToggleFrameVisibility(self, id):
+    def __ToggleFrameVisibility(self, id):
         if self.frames[id]['visibility'] != True:
             self.frames[id]['visibility'] = True
             self.frames[id]['button'].configure(bg='blue')
         else:
             self.frames[id]['visibility'] = False
             self.frames[id]['button'].configure(bg='gray')
-        self.DrawFrames()
+        self.__DrawFrames()
 # ===================================================================================
     ## @brief キーボードイベント受け取り時の処理
     @mylogger.deco
@@ -93,7 +93,7 @@ class MyTkRoot(tk.Tk):
         mylogger.info(event)
         # Ctrl+数字ならフレームの表示をトグル
         if event.keysym.isdecimal() and len(self.idtable) >= int(event.keysym)-1:
-            self.ToggleFrameVisibility(self.idtable[int(event.keysym)-1])
+            self.__ToggleFrameVisibility(self.idtable[int(event.keysym)-1])
         # 登録されているコールバックを呼び出す
         if self.isKeyEventProcessing == False:
             self.isKeyEventProcessing = True

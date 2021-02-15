@@ -12,8 +12,8 @@
 # サンプルコード
 ```python
 if __name__ == '__main__':
-    db = MyDataBase('task.xlsx')
-    db.DFAppendColumn(['project', 'task', 'status'])
+    db = MyDataBase.GetInstance('task.xlsx')
+    db.DFAppendColumn(['data/project', 'data/task', 'data/status'])
     db.DFAppendRow(['プロジェクトX','洗濯','OPEN'])
     db.DFAppendRow(['プロジェクトX','家事','DOING'])
     db.DFAppendRow(['プロジェクトY','会議','DONE'])
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     mylogger.success(db.GetDict())
     mylogger.success(db.GetStr())
     mylogger.success(db.GetHTML())
-    db.DFSort('status', ascending=False)
-    db.DFDropDuplicates('project')
+    db.DFSort('data/status', ascending=False)
+    db.DFDropDuplicates('data/project')
     db.DFWrite()
 ```

@@ -139,7 +139,7 @@ class WidgetFactory():
         for name in name_list:
             index = name_list.index(name)
             # widget生成と配置
-            my_font = font.Font(parent,family=u'ＭＳ ゴシック',size=20)
+            my_font = font.Font(parent,family=u'ＭＳ ゴシック',size=10)
             instance = cls.Text(parent,wrap=tk.CHAR,undo=True, bg='black',font=my_font, foreground='white', insertbackground='white')
             x_sb = tk.Scrollbar(parent,orient='horizontal')
             y_sb = tk.Scrollbar(parent,orient='vertical')
@@ -193,18 +193,19 @@ class WidgetFactory():
             self.configure(state='normal')
             self.delete('1.0','end')
             # 文字色設定
-            flag = True
+            cnt = 1
             for column in database.GetColumns():
-                if flag:
-                    self.tag_config(column, background="blue")
-                    flag = False
-                else:
-                    self.tag_config(column, background="green")
-                    flag = True
+                R = ((33 * cnt) - 1) / 1000000
+                G = ((33 * cnt) - 1) / 10000
+                B = ((33 * cnt) - 1) / 100
+                color = '#' + ('00'+str(R))[-2:] + ('00'+str(G))[-2:] + ('00'+str(B))[-2:]
+                mylogger.critical(color)
+                self.tag_config(column, background=color)
+                cnt += 1
             # 文字列設定
             for row in database.GetDict().values():
                 for column in database.GetColumns():
-                    text = (row[column]+"          ")[:10]
+                    text = row[column]
                     self.insert('end',  text + "\t", column)
                 self.insert('end', "\n")
             # 文字色設定

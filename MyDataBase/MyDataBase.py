@@ -16,9 +16,21 @@ class MyDataBase():
     def __init__(self, filename):
         self.basedir = os.path.dirname(os.path.abspath(__file__))
         self.datapath = self.basedir + "/data/" + filename
-        # self.callbacks = []
+        self.OnWriteCallback = []
         self.Initialize()
         self.Backup()
+# ===================================================================================
+    ## @brief インスタンス取得
+    # @note
+    # ファイルごとにインスタンスを生成する
+    @classmethod
+    @mylogger.deco
+    def GetInstance(cls, filename):
+        if not hasattr(cls, 'this_'):
+            cls.this_ = {}
+        if not filename in cls.this_:
+            cls.this_[filename] = cls(filename=filename)
+        return cls.this_[filename]
 # ===================================================================================
     ## @brief データベース初期化処理
     # @note
@@ -60,6 +72,7 @@ class MyDataBase():
     @mylogger.deco
     def DFWrite(self):
         self.df.to_excel(self.datapath, index=False)
+        self.OnWrite()
 # ===================================================================================
     ## @brief データフレームから指定列の重複を削除
     # @note
@@ -82,7 +95,7 @@ class MyDataBase():
     @mylogger.deco
     def DFAppendRow(self, row):
         # サイズが一致しない場合、仮の列名を追加
-        while len(row) != len(self.GetColumns()):
+        while len(row) > len(self.GetColumns()):
             self.DFAppendColumn(['UnknownColumn'+str(len(self.df.columns))])
         # 行追加
         dt = datetime.datetime.now()
@@ -107,12 +120,17 @@ class MyDataBase():
     def GetListByColumn(self, column):
         return self.df.loc[:,column].values.tolist()
 # ===================================================================================
-    ## @brief データフレームを辞書型に変換して取得
+    ## @brief データフレーム列ラベルを取得
     # @note
     # Timestamp用の列を意識しなくていいように削除して渡す。
     @mylogger.deco
     def GetColumns(self):
         return list(self.df.columns)[2:]
+# ===================================================================================
+    ## @brief データフレーム行indexを取得
+    @mylogger.deco
+    def GetRows(self):
+        return list(self.df.index)
 # ===================================================================================
     ## @brief データフレームを辞書型に変換して取得
     @mylogger.deco
@@ -152,9 +170,23 @@ class MyDataBase():
     def GetHTML(self):
         return self.df.to_html(index=False)
 # ===================================================================================
+    ## @brief Excel更新時のコールバック登録
+    @mylogger.deco
+    def AddCallbackOnWrite(self, callback):
+        self.OnWriteCallback.append(callback)
+        mylogger.critical(self.OnWriteCallback)
+# ===================================================================================
+    ## @brief Excel更新時のコールバック呼び出し
+    @mylogger.deco
+    def OnWrite(self):
+        mylogger.critical(self.OnWriteCallback)
+        for callback in self.OnWriteCallback:
+            mylogger.critical(callback)
+            callback()
+# ===================================================================================
 if __name__ == '__main__':
-    db = MyDataBase('task.xlsx')
-    db.DFAppendColumn(['project', 'task', 'status'])
+    db = MyDataBase.GetInstance('task.xlsx')
+    db.DFAppendColumn(['data/project', 'data/task', 'data/status'])
     db.DFAppendRow(['プロジェクトX','洗濯','OPEN'])
     db.DFAppendRow(['プロジェクトX','家事','DOING'])
     db.DFAppendRow(['プロジェクトY','会議','DONE'])
@@ -163,8 +195,8 @@ if __name__ == '__main__':
     mylogger.success(db.GetDict())
     mylogger.success(db.GetStr())
     mylogger.success(db.GetHTML())
-    db.DFSort('status', ascending=False)
-    db.DFDropDuplicates('project')
+    db.DFSort('data/status', ascending=False)
+    db.DFDropDuplicates('data/project')
     db.DFWrite()
     input('press any key ...')
 # ===================================================================================
