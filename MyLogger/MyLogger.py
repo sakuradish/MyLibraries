@@ -72,13 +72,15 @@ class MyLogger:
         handler.setFormatter(logging.Formatter(
             '<div>[ <span class="asctime">%(asctime)s</span> ][ <span class="levelname">%(levelname)8s</span> ][ <span class="funcName">%(funcName)6s</span> ][ <span class="%(levelname)s"> %(message)s</span> ]</div>', datefmt='%Y/%m/%d %H:%M:%S'))
         logger.addHandler(handler)
+        # メンバ変数初期化
+        self.stack = {}
+        self.stacklevel = 0
+        self.numerator = ''
+        self.fraction = ''
         # 初期化処理のログ
         self.info('level is ', level)
         self.info(basedir+'/log/output.log')
         self.info(basedir+'/log/output.html')
-        # メンバ変数初期化
-        self.stack = {}
-        self.stacklevel = 0
 # ===================================================================================
     ## @brief BrowserLogging開始
     # @note
@@ -123,6 +125,19 @@ class MyLogger:
             self.finish()
             return ret
         return decowrapper
+# ===================================================================================
+    ## @brief 進捗率分子登録
+    def SetNumerator(self, numerator):
+        self.numerator = str(numerator)
+# ===================================================================================
+    ## @brief 進捗率分母登録
+    def SetFraction(self, fraction):
+        self.fraction = str(fraction)
+# ===================================================================================
+    ## @brief 進捗率リセット
+    def ResetProgress(self):
+        self.numerator = ''
+        self.fraction = ''
 # ===================================================================================
     ## @brief 開始ログ出力
     def start(self, filename, funcname):
@@ -223,6 +238,8 @@ class MyLogger:
     # 呼び出し元関数が良い感じにログに表示されるように
     # stacklevelを調整している。
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=3):
+        if self.numerator != '' and self.fraction != '':
+            msg = '[' + self.numerator + '/' + self.fraction + ']' + msg
         if msg.find('\n') != -1:
             msg = '\n' + msg + '\n'
         self.origin_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
@@ -230,8 +247,13 @@ class MyLogger:
 if __name__ == '__main__':
     MyLogger = MyLogger.GetInstance('DEBUG')
     MyLogger.StartBrowserLogging()
-    @MyLogger.decomemo
+    @MyLogger.deco
     def test():
+        MyLogger.SetFraction(10)
+        for i in range(10):
+            MyLogger.SetNumerator(i)
+            MyLogger.success('logging with progress')
+        MyLogger.ResetProgress()
         MyLogger.critical('This is CRITICAL. (50)')
         MyLogger.error('This is ERROR. (40)')
         MyLogger.success('This is SUCCESS. (35)')

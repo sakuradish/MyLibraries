@@ -9,8 +9,13 @@
 if __name__ == '__main__':
     MyLogger = MyLogger.GetInstance('DEBUG')
     MyLogger.StartBrowserLogging()
-    @MyLogger.decomemo
+    @MyLogger.deco
     def test():
+        MyLogger.SetFraction(10)
+        for i in range(10):
+            MyLogger.SetNumerator(i)
+            MyLogger.success('logging with progress')
+        MyLogger.ResetProgress()
         MyLogger.critical('This is CRITICAL. (50)')
         MyLogger.error('This is ERROR. (40)')
         MyLogger.success('This is SUCCESS. (35)')
