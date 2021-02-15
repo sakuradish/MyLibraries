@@ -2,9 +2,9 @@
 import sys
 sys.path.append("../MyLogger/")
 # sys.path.append("../MyDataBase/")
-from MyLogger import mylogger
-mylogger = mylogger.GetInstance()
-# mylogger.StartBrowserLogging()
+from MyLogger import MyLogger
+MyLogger = MyLogger.GetInstance()
+# MyLogger.StartBrowserLogging()
 # from MyDataBase import MyDataBase
 from MyTkRoot import MyTkRoot
 # from WidgetFactory import WidgetFactory

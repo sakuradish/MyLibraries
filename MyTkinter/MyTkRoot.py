@@ -1,8 +1,8 @@
 # ===================================================================================
 import sys
 sys.path.append("../MyLogger/")
-from MyLogger import mylogger
-mylogger = mylogger.GetInstance()
+from MyLogger import MyLogger
+MyLogger = MyLogger.GetInstance()
 # ===================================================================================
 import tkinter as tk
 import math
@@ -13,7 +13,7 @@ import math
 # 時間があるときにリファクタしたい
 class MyTkRoot(tk.Tk):
     ## @brief 初期化処理
-    @mylogger.deco
+    @MyLogger.deco
     def __init__(self, **kw):
         super().__init__(**kw)
         self.frames = {}
@@ -24,7 +24,7 @@ class MyTkRoot(tk.Tk):
         self.bind("<Button>", self.OnMouseEvent)
 # ===================================================================================
     ## @brief フレームを登録
-    @mylogger.deco
+    @MyLogger.deco
     def AddFrame(self, frame, id, key=None, mouse=None):
         length = len(self.frames)
         # トグルボタン配置
@@ -43,7 +43,7 @@ class MyTkRoot(tk.Tk):
         self.__DrawFrames()
 # ===================================================================================
     ## @brief フレームを描画
-    @mylogger.deco
+    @MyLogger.deco
     def __DrawFrames(self):
         # 表示状態のFrameのみ抽出
         visibleFrames = []
@@ -72,12 +72,12 @@ class MyTkRoot(tk.Tk):
                     visibleFrames[index].place(relx=relx,rely=rely,relwidth=relwidth,relheight=relheight)
 # ===================================================================================
     ## @brief トグルボタン押下時の処理
-    @mylogger.deco
+    @MyLogger.deco
     def __OnToggleButtonPressed(self, event):
         self.__ToggleFrameVisibility(event.widget["text"])
 # ===================================================================================
     ## @brief Frameの表示状態をトグルさせる
-    @mylogger.deco
+    @MyLogger.deco
     def __ToggleFrameVisibility(self, id):
         if self.frames[id]['visibility'] != True:
             self.frames[id]['visibility'] = True
@@ -88,9 +88,9 @@ class MyTkRoot(tk.Tk):
         self.__DrawFrames()
 # ===================================================================================
     ## @brief キーボードイベント受け取り時の処理
-    @mylogger.deco
+    @MyLogger.deco
     def OnKeyEvent(self, event):
-        mylogger.info(event)
+        MyLogger.info(event)
         # Ctrl+数字ならフレームの表示をトグル
         if event.keysym.isdecimal() and len(self.idtable) >= int(event.keysym)-1:
             self.__ToggleFrameVisibility(self.idtable[int(event.keysym)-1])
@@ -103,9 +103,9 @@ class MyTkRoot(tk.Tk):
             self.isKeyEventProcessing = False
 # ===================================================================================
     ## @brief マウスイベント受け取り時の処理
-    @mylogger.deco
+    @MyLogger.deco
     def OnMouseEvent(self, event):
-        mylogger.info(event)
+        MyLogger.info(event)
         # 登録されているコールバックを呼び出す
         if self.isMouseEventProcessing == False:
             self.isMouseEventProcessing = True

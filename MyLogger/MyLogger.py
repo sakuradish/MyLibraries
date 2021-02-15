@@ -9,7 +9,7 @@ import inspect
 from memory_profiler import profile
 # ===================================================================================
 ## @brief loggingクラス
-class mylogger:
+class MyLogger:
     ## @brief 初期化処理
     def __init__(self, level='DEBUG'):
         # ログレベル追加
@@ -228,18 +228,18 @@ class mylogger:
         self.origin_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
 # ===================================================================================
 if __name__ == '__main__':
-    mylogger = mylogger.GetInstance('DEBUG')
-    mylogger.StartBrowserLogging()
-    @mylogger.decomemo
+    MyLogger = MyLogger.GetInstance('DEBUG')
+    MyLogger.StartBrowserLogging()
+    @MyLogger.decomemo
     def test():
-        mylogger.critical('This is CRITICAL. (50)')
-        mylogger.error('This is ERROR. (40)')
-        mylogger.success('This is SUCCESS. (35)')
-        mylogger.warning('This is WARNING. (30)')
-        mylogger.notice('This is NOTICE. (25)')
-        mylogger.info('This is INFO. (20)')
-        mylogger.verbose('This is VERBOSE. (15)')
-        mylogger.debug('This is DEBUG. (10)')
-        mylogger.spam('This is SPAM. (5)')
+        MyLogger.critical('This is CRITICAL. (50)')
+        MyLogger.error('This is ERROR. (40)')
+        MyLogger.success('This is SUCCESS. (35)')
+        MyLogger.warning('This is WARNING. (30)')
+        MyLogger.notice('This is NOTICE. (25)')
+        MyLogger.info('This is INFO. (20)')
+        MyLogger.verbose('This is VERBOSE. (15)')
+        MyLogger.debug('This is DEBUG. (10)')
+        MyLogger.spam('This is SPAM. (5)')
     test()
 #============================================================================================================================================================================================================================================================

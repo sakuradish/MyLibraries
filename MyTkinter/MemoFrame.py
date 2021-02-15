@@ -2,8 +2,8 @@
 import sys
 sys.path.append("../MyLogger/")
 sys.path.append("../MyDataBase/")
-from MyLogger import mylogger
-mylogger = mylogger.GetInstance()
+from MyLogger import MyLogger
+MyLogger = MyLogger.GetInstance()
 from MyDataBase import MyDataBase
 from MyTkRoot import MyTkRoot
 from WidgetFactory import WidgetFactory
@@ -17,7 +17,7 @@ import tkinter as tk
 # ===================================================================================
 ## @brief メモを表示するフレーム
 class MemoFrame(tk.Frame):
-    @mylogger.deco
+    @MyLogger.deco
     def __init__(self,master,**kw):
         super().__init__(master,**kw)
         self.memodata = MyDataBase.GetInstance("memo.xlsx")
@@ -25,7 +25,7 @@ class MemoFrame(tk.Frame):
         self.memodata.AddCallbackOnWrite(self.OnWrite)
         self.Draw()
 # ===================================================================================
-    @mylogger.deco
+    @MyLogger.deco
     def Draw(self):
         columns = self.memodata.GetColumns()
         self.labels = WidgetFactory.NewLabel(self, columns, 0,0,1,0.05, "ToRight")
@@ -40,7 +40,7 @@ class MemoFrame(tk.Frame):
         self.text = WidgetFactory.NewText(self, ['text'], 0,0.1,1,0.9, "ToRight")
         self.text['widgets']['text']['instance'].SetText(self.memodata)
 # ===================================================================================
-    @mylogger.deco
+    @MyLogger.deco
     def OnKeyEvent(self, event):
         if event.keysym == 'Return':
             print(WidgetFactory.HasFocus(self.comboboxes['id'] , self.master.focus_get()))
@@ -51,7 +51,7 @@ class MemoFrame(tk.Frame):
                     self.memodata.DFFilter(column, self.comboboxes['widgets'][column]['instance'].GetText())
                 self.text['widgets']['text']['instance'].SetText(self.memodata)
 # ===================================================================================
-    @mylogger.deco
+    @MyLogger.deco
     def OnWrite(self):
         self.text['widgets']['text']['instance'].SetText(self.memodata)
 # ===================================================================================

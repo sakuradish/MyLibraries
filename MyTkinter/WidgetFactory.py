@@ -2,8 +2,8 @@
 import sys
 sys.path.append("../MyLogger/")
 sys.path.append("../MyDataBase/")
-from MyLogger import mylogger
-mylogger = mylogger.GetInstance()
+from MyLogger import MyLogger
+MyLogger = MyLogger.GetInstance()
 from MyDataBase import MyDataBase
 from MyTkRoot import MyTkRoot
 # ===================================================================================
@@ -37,7 +37,7 @@ class WidgetFactory():
     def HasFocus(cls, id, focused):
         for key,widget in cls.GetInstance().widgets[id].items():
             if widget['instance'] == focused:
-                mylogger.critical(key)
+                MyLogger.critical(key)
                 return key
         return None
 # ===================================================================================
@@ -199,7 +199,7 @@ class WidgetFactory():
                 G = ((33 * cnt) - 1) / 10000
                 B = ((33 * cnt) - 1) / 100
                 color = '#' + ('00'+str(R))[-2:] + ('00'+str(G))[-2:] + ('00'+str(B))[-2:]
-                mylogger.critical(color)
+                MyLogger.critical(color)
                 self.tag_config(column, background=color)
                 cnt += 1
             # 文字列設定

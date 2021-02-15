@@ -1,8 +1,8 @@
 # ===================================================================================
 import sys
 sys.path.append("../MyLogger/")
-from MyLogger import mylogger
-mylogger = mylogger.GetInstance()
+from MyLogger import MyLogger
+MyLogger = MyLogger.GetInstance()
 # ===================================================================================
 import os
 import datetime
@@ -12,7 +12,7 @@ import shutil
 ## @brief Excelのデータを管理するクラス
 class MyDataBase():
     ## @brief 初期化処理
-    @mylogger.deco
+    @MyLogger.deco
     def __init__(self, filename):
         self.basedir = os.path.dirname(os.path.abspath(__file__))
         self.datapath = self.basedir + "/data/" + filename
@@ -24,7 +24,7 @@ class MyDataBase():
     # @note
     # ファイルごとにインスタンスを生成する
     @classmethod
-    @mylogger.deco
+    @MyLogger.deco
     def GetInstance(cls, filename):
         if not hasattr(cls, 'this_'):
             cls.this_ = {}
@@ -34,7 +34,7 @@ class MyDataBase():
 # ===================================================================================
     ## @brief データベース初期化処理
     # @note
-    @mylogger.deco
+    @MyLogger.deco
     def Initialize(self):
         # ファイル/フォルダがなければ作成
         if not os.path.exists(os.path.dirname(self.datapath)):
@@ -42,7 +42,7 @@ class MyDataBase():
         if not os.path.exists(self.datapath):
             pd.DataFrame(columns=['timestamp/date', 'timestamp/time']).to_excel(self.datapath, index=False)
             # pd.DataFrame().to_excel(self.datapath, index=False)
-            mylogger.info(self.datapath, ' is initialized')
+            MyLogger.info(self.datapath, ' is initialized')
         # DataFrame読み込み
         self.DFRead()
         # Timestamp用の列がなければ追加してファイル更新
@@ -53,7 +53,7 @@ class MyDataBase():
             self.DFWrite()
 # ===================================================================================
     # @brief バックアップ処理
-    @mylogger.deco
+    @MyLogger.deco
     def Backup(self):
         folder = self.basedir + "/backup/" + str(datetime.date.today()) + "/"
         file = folder + os.path.basename(self.datapath)
@@ -63,13 +63,13 @@ class MyDataBase():
             shutil.copy2(self.datapath, file)
 # ===================================================================================
     ## @brief データフレームをxlsxから読み込み
-    @mylogger.deco
+    @MyLogger.deco
     def DFRead(self):
         self.df = pd.read_excel(self.datapath, engine='openpyxl')
 # ===================================================================================
     ## @brief データフレームをxlsxに書き込み
     # @note
-    @mylogger.deco
+    @MyLogger.deco
     def DFWrite(self):
         self.df.to_excel(self.datapath, index=False)
         self.OnWrite()
@@ -77,22 +77,22 @@ class MyDataBase():
     ## @brief データフレームから指定列の重複を削除
     # @note
     # keepに'first/last'を設定することで残す行を選択可能
-    @mylogger.deco
+    @MyLogger.deco
     def DFDropDuplicates(self, column, keep='last'):
         self.df = self.df.drop_duplicates(subset=[column], keep=keep)
 # ===================================================================================
     ## @brief データフレームを指定列で並び替え
-    @mylogger.deco
+    @MyLogger.deco
     def DFSort(self, column, ascending=True):
         self.df = self.df.sort_values(by=[column], ascending=ascending)
 # ===================================================================================
     ## @brief データフレームを指定列と値でフィルタ
-    @mylogger.deco
+    @MyLogger.deco
     def DFFilter(self, column, value):
         self.df = self.df[self.df[column].str.contains(value)]
 # ===================================================================================
     ## @brief データフレームに行を追加
-    @mylogger.deco
+    @MyLogger.deco
     def DFAppendRow(self, row):
         # サイズが一致しない場合、仮の列名を追加
         while len(row) > len(self.GetColumns()):
@@ -106,34 +106,34 @@ class MyDataBase():
         self.df = self.df.append(temp, ignore_index=True)
 # ===================================================================================
     ## @brief データフレームに列を追加
-    @mylogger.deco
+    @MyLogger.deco
     def DFAppendColumn(self, columns, value=''):
         for column in columns:
             if not column in self.df.columns:
                 self.df.insert(len(self.df.columns), column, value)
             else:
-                mylogger.warning('column ', column, ' is already exist')
+                MyLogger.warning('column ', column, ' is already exist')
         self.DFWrite()
 # ===================================================================================
     ## @brief 指定列だけ取り出し
-    @mylogger.deco
+    @MyLogger.deco
     def GetListByColumn(self, column):
         return self.df.loc[:,column].values.tolist()
 # ===================================================================================
     ## @brief データフレーム列ラベルを取得
     # @note
     # Timestamp用の列を意識しなくていいように削除して渡す。
-    @mylogger.deco
+    @MyLogger.deco
     def GetColumns(self):
         return list(self.df.columns)[2:]
 # ===================================================================================
     ## @brief データフレーム行indexを取得
-    @mylogger.deco
+    @MyLogger.deco
     def GetRows(self):
         return list(self.df.index)
 # ===================================================================================
     ## @brief データフレームを辞書型に変換して取得
-    @mylogger.deco
+    @MyLogger.deco
     def GetDict(self):
         return self.df.to_dict('index')
 # ===================================================================================
@@ -141,7 +141,7 @@ class MyDataBase():
     # @note
     # データフレームにto_stringというメソッドがあるが、
     # TAB区切りの方が好みなので自作
-    @mylogger.deco
+    @MyLogger.deco
     def GetStr(self):
         ret = ''
         # タイトル行
@@ -166,22 +166,22 @@ class MyDataBase():
         return ret
 # ===================================================================================
     ## @brief データフレームをHTML文字列に変換して取得
-    @mylogger.deco
+    @MyLogger.deco
     def GetHTML(self):
         return self.df.to_html(index=False)
 # ===================================================================================
     ## @brief Excel更新時のコールバック登録
-    @mylogger.deco
+    @MyLogger.deco
     def AddCallbackOnWrite(self, callback):
         self.OnWriteCallback.append(callback)
-        mylogger.critical(self.OnWriteCallback)
+        MyLogger.critical(self.OnWriteCallback)
 # ===================================================================================
     ## @brief Excel更新時のコールバック呼び出し
-    @mylogger.deco
+    @MyLogger.deco
     def OnWrite(self):
-        mylogger.critical(self.OnWriteCallback)
+        MyLogger.critical(self.OnWriteCallback)
         for callback in self.OnWriteCallback:
-            mylogger.critical(callback)
+            MyLogger.critical(callback)
             callback()
 # ===================================================================================
 if __name__ == '__main__':
@@ -191,10 +191,10 @@ if __name__ == '__main__':
     db.DFAppendRow(['プロジェクトX','家事','DOING'])
     db.DFAppendRow(['プロジェクトY','会議','DONE'])
     db.DFAppendRow(['プロジェクトY','営業','OPEN'])
-    mylogger.success(db.GetColumns())
-    mylogger.success(db.GetDict())
-    mylogger.success(db.GetStr())
-    mylogger.success(db.GetHTML())
+    MyLogger.success(db.GetColumns())
+    MyLogger.success(db.GetDict())
+    MyLogger.success(db.GetStr())
+    MyLogger.success(db.GetHTML())
     db.DFSort('data/status', ascending=False)
     db.DFDropDuplicates('data/project')
     db.DFWrite()

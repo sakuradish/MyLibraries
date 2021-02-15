@@ -2,8 +2,8 @@
 import sys
 sys.path.append("../MyLogger/")
 sys.path.append("../MyDataBase/")
-from MyLogger import mylogger
-mylogger = mylogger.GetInstance()
+from MyLogger import MyLogger
+MyLogger = MyLogger.GetInstance()
 from MyDataBase import MyDataBase
 from MyTkRoot import MyTkRoot
 from WidgetFactory import WidgetFactory
@@ -12,7 +12,7 @@ import tkinter as tk
 # ===================================================================================
 ## @brief メモを表示するフレーム
 class TaskFrame(tk.Frame):
-    @mylogger.deco
+    @MyLogger.deco
     def __init__(self,master,**kw):
         super().__init__(master,**kw)
         self.taskdata = MyDataBase.GetInstance("task.xlsx")
@@ -27,7 +27,7 @@ class TaskFrame(tk.Frame):
         self.InitializeDynamicWidget()
         self.Draw()
 # ===================================================================================
-    @mylogger.deco
+    @MyLogger.deco
     def InitializeStaticWidget(self):
         # inputfield
         if 'label' in self.inputfield:
@@ -46,7 +46,7 @@ class TaskFrame(tk.Frame):
         for column,widget in self.filterfield['combobox']['widgets'].items():
             widget['instance'].SetText('')
 # ===================================================================================
-    @mylogger.deco
+    @MyLogger.deco
     def InitializeDynamicWidget(self):
         # viewerfield
         if 'data/project' in self.viewerfield:
@@ -60,9 +60,9 @@ class TaskFrame(tk.Frame):
         for column,widget in self.filterfield['combobox']['widgets'].items():
             self.taskdata.DFFilter(column, widget['instance'].GetText())
         rows = self.taskdata.GetRows()
-        mylogger.critical(self.taskdata.df)
-        mylogger.critical(self.taskdata.df.index)
-        mylogger.critical(list(self.taskdata.df.index))
+        MyLogger.critical(self.taskdata.df)
+        MyLogger.critical(self.taskdata.df.index)
+        MyLogger.critical(list(self.taskdata.df.index))
         self.viewerfield['data/project'] = WidgetFactory.NewLabel(self, rows, 0,0.35,0.2,0.65, "ToBottom")
         self.viewerfield['data/task'] = WidgetFactory.NewLabel(self, rows, 0.2,0.35,0.4,0.65, "ToBottom")
         self.viewerfield['data/status'] = WidgetFactory.NewCombobox(self, rows, 0.6,0.35,0.2,0.65, "ToBottom")
@@ -76,7 +76,7 @@ class TaskFrame(tk.Frame):
         rows = self.taskdata.GetRows()
         self.memofield['combobox'] = WidgetFactory.NewCombobox(self, rows, 0.8,0.35,0.2,0.65, "ToBottom")
 # ===================================================================================
-    @mylogger.deco
+    @MyLogger.deco
     def Draw(self):
         # inputfield
         columns = self.taskdata.GetColumns()
@@ -109,7 +109,7 @@ class TaskFrame(tk.Frame):
         for row,widget in self.memofield['combobox']['widgets'].items():
             widget['instance'].SetText('')
 # ===================================================================================
-    @mylogger.deco
+    @MyLogger.deco
     def OnKeyEvent(self, event):
         if event.keysym == 'Return':
             if WidgetFactory.HasFocus(self.inputfield['combobox']['id'] , self.master.focus_get()):
@@ -133,7 +133,7 @@ class TaskFrame(tk.Frame):
                 project = self.viewerfield['data/project']['widgets'][focused]['instance'].GetText()
                 task = self.viewerfield['data/task']['widgets'][focused]['instance'].GetText()
                 status = self.viewerfield['data/status']['widgets'][focused]['instance'].GetText()
-                mylogger.critical(project,task,status)
+                MyLogger.critical(project,task,status)
                 self.taskdata.DFRead()
                 self.taskdata.DFAppendRow([project,task,status])
                 self.taskdata.DFWrite()
@@ -144,7 +144,7 @@ class TaskFrame(tk.Frame):
                 project = self.viewerfield['data/project']['widgets'][focused]['instance'].GetText()
                 task = self.viewerfield['data/task']['widgets'][focused]['instance'].GetText()
                 memo = self.memofield['combobox']['widgets'][focused]['instance'].GetText()
-                mylogger.critical(project,task,memo)
+                MyLogger.critical(project,task,memo)
                 self.memodata.DFRead()
                 self.memodata.DFAppendRow([project,task,memo])
                 self.memodata.DFWrite()
