@@ -3,3 +3,5 @@
 /MyLogger/log/*
 /MyDataBase/data/*
 /MyDataBase/backup/*
+/MyPlantUML/input/*
+/MyPlantUML/output/*
