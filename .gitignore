@@ -5,3 +5,5 @@
 /MyDataBase/backup/*
 /MyPlantUML/input/*
 /MyPlantUML/output/*
+/MyPlantUML/docs/*
+!.gitkeep
