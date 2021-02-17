@@ -69,19 +69,21 @@ def analyzeXML(xmlpath):
 def DraftUML():
    inputbase='./input/'
    outputbase='./output/'
+   MyLogger.SetFraction(len(db.GetDict().items()))
    for index,values in db.GetDict().items():
+      MyLogger.SetNumerator(index)
       compoundname = values['compoundname']
-      compoundname = compoundname[compoundname.rfind("::")+2:]
+      compoundname = compoundname[compoundname.rfind(":")+1:]
       definition = values['definition']
       argsstring = values['argsstring']
-      MyLogger.sakura(argsstring)
-      argsstring = argsstring.replace(" ","_").replace(":","").replace("&","").replace("<","").replace(">","")
+      # argsstring = argsstring.replace(" ","_").replace(":","").replace("&","").replace("<","").replace(">","")
       name = values['name']
       bodyfile = values['bodyfile']
       bodystart = int(values['bodystart'])-1
       bodyend = int(values['bodyend'])
       inputfile = inputbase+bodyfile
-      outputfile = outputbase+bodyfile+'/'+name+"_"+argsstring+'.pu'
+      # outputfile = outputbase+bodyfile+'/'+name+"_"+argsstring+'.pu'
+      outputfile = outputbase+bodyfile+'/'+name+'.pu'
       if not os.path.exists(os.path.dirname(outputfile)):
          os.makedirs(os.path.dirname(outputfile))
       functionbody = __myopen(inputfile, 'r').readlines()[bodystart:bodyend]
@@ -89,7 +91,7 @@ def DraftUML():
       with __myopen(outputfile, 'w', encoding='utf-8') as f:
          f.write("' #######################################\n")
          f.write("@startuml\n")
-         f.write("== " + compoundname + ":" + name + " ==\n")
+         f.write("== " + compoundname + ":" + name + argsstring + " ==\n")
          f.write("activate " + compoundname + "\n")
          f.write("' #######################################\n")
          f.write(''.join(functionbody))
@@ -110,58 +112,43 @@ def CustomizeFunctionBody(functionbody, compoundname):
    def FirstFormat(functionbody, compoundname):
       ret = []
       buf = ''
-      for line in functionbody:
-         for char in line:
-            buf += char
-            buf = buf.lstrip()
-            if buf == "":
-               continue
-            # 関数宣言マッチャー # ifとかforもマッチするはず
-            result = re.fullmatch("(.*\(.*\).*\{)", buf, re.S)
-            if result:
-               # ラムダ式で引っ掛からないようにする
-               if len(re.findall("\(", buf))-len(re.findall("\)", buf)) == 0:
-                  ret.append(result.group(1).replace("\n", "") + "\n")
-                  buf = ''
-                  continue
-            # 一行コメントマッチャー
-            result = re.fullmatch("(//.*\n)", buf, re.S)
-            if result:
-               ret.append(result.group(1).replace("\n", "") + "\n")
-               buf = ''
-               continue
-            # 複数行コメントマッチャー
-            result = re.fullmatch("(\/\*.*\*\/)", buf, re.S)
-            if result:
-               ret.append(result.group(1).replace("\n", "") + "\n")
-               buf = ''
-               continue
-            # 処理マッチャー
-            result = re.fullmatch("(.*;)", buf, re.S)
-            if result:
-               # ラムダ式で引っ掛からないようにする
-               if len(re.findall("\(", buf))-len(re.findall("\)", buf)) == 0:
-                  ret.append(result.group(1).replace("\n", "") + "\n")
-                  buf = ''
-                  continue
-            # ブロック終端マッチャー
-            result = re.fullmatch("(})", buf, re.S)
-            if result:
-               ret.append(result.group(1).replace("\n", "") + "\n")
-               buf = ''
-               continue
-            # プリプロセッサーマッチャー
-            result = re.fullmatch("(#.*\n)", buf, re.S)
-            if result:
-               ret.append(result.group(1).replace("\n", "") + "\n")
-               buf = ''
-               continue
-            # elseマッチャー
-            result = re.fullmatch("(#.*\n)", buf, re.S)
-            if result:
-               ret[-1] = ret[-1].replace("\n","") + " " + result.group(1).replace("\n", "") + "\n"
-               buf = ''
-               continue
+      for char in ''.join(functionbody):
+         buf += char
+         # bufは必ず空白文字以外で始まるようにする
+         buf = buf.lstrip()
+         if buf == "":
+            continue
+         # ラムダ式で引っ掛からないようにする
+         elif len(re.findall("\(", buf))-len(re.findall("\)", buf)) != 0:
+            continue
+         # 関数宣言マッチャー # ifとかforもマッチするはず
+         elif (result := re.fullmatch("(.*\(.*\).*\{)", buf, re.S)):
+            ret.append(result.group(1).replace("\n", "") + "\n")
+            buf = ''
+         # 処理マッチャー
+         elif (result := re.fullmatch("(.*;)", buf, re.S)):
+            ret.append(result.group(1).replace("\n", "") + "\n")
+            buf = ''
+         # 一行コメントマッチャー
+         elif (result := re.fullmatch("(//.*\n)", buf, re.S)):
+            ret.append(result.group(1).replace("\n", "") + "\n")
+            buf = ''
+         # 複数行コメントマッチャー
+         elif (result := re.fullmatch("(\/\*.*\*\/)", buf, re.S)):
+            ret.append(result.group(1).replace("\n", "") + "\n")
+            buf = ''
+         # ブロック終端マッチャー
+         elif (result := re.fullmatch("(})", buf, re.S)):
+            ret.append(result.group(1).replace("\n", "") + "\n")
+            buf = ''
+         # プリプロセッサーマッチャー
+         elif (result := re.fullmatch("(#.*\n)", buf, re.S)):
+            ret.append(result.group(1).replace("\n", "") + "\n")
+            buf = ''
+         # elseマッチャー
+         elif (result := re.fullmatch("(else.*{)", buf, re.S)):
+            ret[-1] = ret[-1].replace("\n","") + " " + result.group(1).replace("\n", "") + "\n"
+            buf = ''
       return ret
    def RemoveFunctionBlock(functionbody, compoundname):
       return functionbody[1:-1]
@@ -169,28 +156,26 @@ def CustomizeFunctionBody(functionbody, compoundname):
       ret = []
       for line in functionbody:
          # プリプロセッサ系
-         if re.fullmatch("(#ifdef.*\n)", line, re.S):
-            ret.append("alt "+line)
-         elif re.fullmatch("(#ifndef.*\n)", line, re.S):
+         if re.fullmatch("(#if.*\n)", line, re.S):
             ret.append("alt "+line)
          elif re.fullmatch("(#else.*\n)", line, re.S):
             ret.append("else "+line)
          elif re.fullmatch("(#endif.*\n)", line, re.S):
             ret.append("end "+line)
          # ブロック系
-         elif re.fullmatch("(.*\(.*\).*\{)", line, re.S):
+         elif re.fullmatch("(.*\(.*\).*\{\n)", line, re.S):
             ret.append("alt "+line)
-         elif re.fullmatch("(\}.*else.*\{)", line, re.S):
+         elif re.fullmatch("(}.*else.*\{\n)", line, re.S):
             ret.append("else "+line)
-         elif re.fullmatch("(\}\n)", line, re.S):
+         elif re.fullmatch("(}\n)", line, re.S):
             ret.append("end "+line)
          # コメント
          elif re.fullmatch("(//.*\n)", line, re.S):
             ret.append("note right "+compoundname+": "+line)
-         elif re.fullmatch("(\/\*.*\*\/)", line, re.S):
+         elif re.fullmatch("(\/\*.*\*\/\n)", line, re.S):
             ret.append("note right "+compoundname+": "+line)
          # return
-         elif re.fullmatch("(return.*;)", line, re.S):
+         elif re.fullmatch("(return.*;\n)", line, re.S):
             ret.append(compoundname+"-->entrypoint: "+line)
          # その他
          else:
@@ -200,7 +185,8 @@ def CustomizeFunctionBody(functionbody, compoundname):
       def Nest(nest):
          return ("  "*nest)
       def AlignRight(text):
-         return (((" "*50)+text)[-50:])
+         maxlen = len("note right "+compoundname+"#00ffff: ")
+         return (((" "*maxlen)+text)[-maxlen:])
       ret = []
       nest = 0
       for line in functionbody:
@@ -212,7 +198,7 @@ def CustomizeFunctionBody(functionbody, compoundname):
          elif (result := re.fullmatch("(end )(.*\n)", line, re.S)) != None:
             nest -= 1
             ret.append(AlignRight(result.group(1))+Nest(nest)+result.group(2))
-         elif (result := re.fullmatch("(.*: )(.*\n)", line, re.S)) != None:
+         elif (result := re.fullmatch("([^:]*: )(.*\n)", line, re.S)) != None:
             ret.append(AlignRight(result.group(1))+Nest(nest)+result.group(2))
       return ret
    functionbody = RemoveEmpty(functionbody, compoundname)
@@ -223,6 +209,6 @@ def CustomizeFunctionBody(functionbody, compoundname):
    return functionbody
 #============================================================================================================================================================
 if __name__ == '__main__':
-   # main('./input/xml/')
+   main('./input/xml/')
    DraftUML()
 #============================================================================================================================================================
