@@ -15,7 +15,9 @@ from bs4 import BeautifulSoup
 #============================================================================================================================================================
 @MyLogger.deco
 def __myopen(filepath, mode, encoding=''):
-   if encoding == '':
+   if mode == 'w':
+      return open(filepath, mode, encoding='utf-8')
+   elif encoding == '':
       from chardet.universaldetector import UniversalDetector
       detector = UniversalDetector()
       with open(filepath, mode='rb') as f:
@@ -35,6 +37,7 @@ def main(doxygenpath):
    for file in files:
       MyLogger.SetNumerator(files.index(file))
       analyzeXML(file)
+   db.DFWrite()
 #============================================================================================================================================================
 @MyLogger.deco
 def analyzeXML(xmlpath):
@@ -57,11 +60,10 @@ def analyzeXML(xmlpath):
       bodyfile = location['bodyfile']
       bodystart = location['bodystart']
       bodyend = location['bodyend']
-      MyLogger.critical(bodyfile)
-      MyLogger.critical(bodystart)
-      MyLogger.critical(bodyend)
+      MyLogger.sakura(bodyfile)
+      MyLogger.sakura(bodystart)
+      MyLogger.sakura(bodyend)
       db.DFAppendRow([compoundname, definition, argsstring, name, bodyfile, bodystart, bodyend])
-   db.DFWrite()
 #============================================================================================================================================================
 @MyLogger.deco
 def DraftUML():
@@ -69,9 +71,10 @@ def DraftUML():
    outputbase='./output/'
    for index,values in db.GetDict().items():
       compoundname = values['compoundname']
+      compoundname = compoundname[compoundname.rfind("::")+2:]
       definition = values['definition']
       argsstring = values['argsstring']
-      MyLogger.critical(argsstring)
+      MyLogger.sakura(argsstring)
       argsstring = argsstring.replace(" ","_").replace(":","").replace("&","").replace("<","").replace(">","")
       name = values['name']
       bodyfile = values['bodyfile']
@@ -89,9 +92,7 @@ def DraftUML():
          f.write("== " + compoundname + ":" + name + " ==\n")
          f.write("activate " + compoundname + "\n")
          f.write("' #######################################\n")
-         # f.write("note right " + compoundname + "\n")
          f.write(''.join(functionbody))
-         # f.write("end note\n")
          f.write("' #######################################\n")
          f.write("deactivate " + compoundname + "\n")
          f.write("@enduml\n")
@@ -109,43 +110,91 @@ def CustomizeFunctionBody(functionbody, compoundname):
    def Format(functionbody, compoundname):
       ret = []
       buf = ''
-      def AppendMatch(ret, buf, result):
-         if buf.find('}') != -1:
-            ret.append('}\n')
-         ret.append(result.group(1).replace("\n", "") + "\n")
-         # buf = buf.replace(result.group(1), "")
-         buf = ''
-         return ret,buf
       for line in functionbody:
          for char in line:
             buf += char
+            buf = buf.lstrip()
+            if buf == "":
+               continue
             # 関数宣言マッチャー # ifとかforもマッチするはず
-            result = re.fullmatch("(.*\(.*\).*\{).*", buf, re.S)
+            result = re.fullmatch("(.*\(.*\).*\{)", buf, re.S)
             if result:
-               ret,buf = AppendMatch(ret,buf,result)
+               # ラムダ式で引っ掛からないようにする
+               if len(re.findall("\(", buf))-len(re.findall("\)", buf)) == 0:
+                  ret.append(result.group(1).replace("\n", "") + "\n")
+                  buf = ''
+                  continue
             # 一行コメントマッチャー
-            result = re.fullmatch(".*(//.*)\n.*", buf, re.S)
+            result = re.fullmatch("(//.*\n)", buf, re.S)
             if result:
-               ret,buf = AppendMatch(ret,buf,result)
+               ret.append(result.group(1).replace("\n", "") + "\n")
+               buf = ''
+               continue
             # 複数行コメントマッチャー
-            result = re.fullmatch(".*(\/\*.*\*\/).*", buf, re.S)
+            result = re.fullmatch("(\/\*.*\*\/)", buf, re.S)
             if result:
-               ret,buf = AppendMatch(ret,buf,result)
+               ret.append(result.group(1).replace("\n", "") + "\n")
+               buf = ''
+               continue
             # 処理マッチャー
             result = re.fullmatch("(.*;)", buf, re.S)
             if result:
-               ret,buf = AppendMatch(ret,buf,result)
-      buf = buf.replace("\n", "")
-      ret.append(buf + "\n")
+               ret.append(result.group(1).replace("\n", "") + "\n")
+               buf = ''
+               continue
+            # ブロック終端マッチャー
+            result = re.fullmatch("(})", buf, re.S)
+            if result:
+               ret.append(result.group(1).replace("\n", "") + "\n")
+               buf = ''
+               continue
+            # プリプロセッサーマッチャー
+            result = re.fullmatch("(#.*\n)", buf, re.S)
+            if result:
+               ret.append(result.group(1).replace("\n", "") + "\n")
+               buf = ''
+               continue
+            # elseマッチャー
+            result = re.fullmatch("(#.*\n)", buf, re.S)
+            if result:
+               ret[-1] = ret[-1].replace("\n","") + " " + result.group(1).replace("\n", "") + "\n"
+               buf = ''
+               continue
+      # buf = buf.replace("\n", "")
+      # ret.append(buf + "\n")
       return ret
    def RemoveFunctionBlock(functionbody, compoundname):
       return functionbody[1:-1]
    def AddPlantUMLSentence(functionbody, compoundname):
       ret = []
       for line in functionbody:
-         # if line.find("}") != -1 and line.find("}") != -1:
-         # if line.find("{") != -1:
-         ret.append('note right ' + compoundname + ': ' + line)
+         # プリプロセッサ系
+         if re.fullmatch("(#ifdef.*\n)", line, re.S):
+            ret.append("alt "+line)
+         elif re.fullmatch("(#ifndef.*\n)", line, re.S):
+            ret.append("alt "+line)
+         elif re.fullmatch("(#else.*\n)", line, re.S):
+            ret.append("else "+line)
+         elif re.fullmatch("(#endif.*\n)", line, re.S):
+            ret.append("end "+line)
+         # ブロック系
+         elif re.fullmatch("(.*\(.*\).*\{)", line, re.S):
+            ret.append("alt "+line)
+         elif re.fullmatch("(\}.*else.*\{)", line, re.S):
+            ret.append("else "+line)
+         elif re.fullmatch("(\}\n)", line, re.S):
+            ret.append("end "+line)
+         # コメント
+         elif re.fullmatch("(//.*\n)", line, re.S):
+            ret.append("note right "+compoundname+": "+line)
+         elif re.fullmatch("(\/\*.*\*\/)", line, re.S):
+            ret.append("note right "+compoundname+": "+line)
+         # return
+         elif re.fullmatch("(return.*;)", line, re.S):
+            ret.append(compoundname+"-->entrypoint: "+line)
+         # その他
+         else:
+            ret.append("note right "+compoundname+"#00ffff: "+line)
       return ret
    functionbody = RemoveEmpty(functionbody, compoundname)
    functionbody = Format(functionbody, compoundname)
