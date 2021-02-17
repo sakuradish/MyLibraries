@@ -107,7 +107,7 @@ def CustomizeFunctionBody(functionbody, compoundname):
          line = line.strip('\t')
          ret.append(line)
       return ret
-   def Format(functionbody, compoundname):
+   def FirstFormat(functionbody, compoundname):
       ret = []
       buf = ''
       for line in functionbody:
@@ -139,9 +139,11 @@ def CustomizeFunctionBody(functionbody, compoundname):
             # 処理マッチャー
             result = re.fullmatch("(.*;)", buf, re.S)
             if result:
-               ret.append(result.group(1).replace("\n", "") + "\n")
-               buf = ''
-               continue
+               # ラムダ式で引っ掛からないようにする
+               if len(re.findall("\(", buf))-len(re.findall("\)", buf)) == 0:
+                  ret.append(result.group(1).replace("\n", "") + "\n")
+                  buf = ''
+                  continue
             # ブロック終端マッチャー
             result = re.fullmatch("(})", buf, re.S)
             if result:
@@ -160,8 +162,6 @@ def CustomizeFunctionBody(functionbody, compoundname):
                ret[-1] = ret[-1].replace("\n","") + " " + result.group(1).replace("\n", "") + "\n"
                buf = ''
                continue
-      # buf = buf.replace("\n", "")
-      # ret.append(buf + "\n")
       return ret
    def RemoveFunctionBlock(functionbody, compoundname):
       return functionbody[1:-1]
@@ -196,10 +196,30 @@ def CustomizeFunctionBody(functionbody, compoundname):
          else:
             ret.append("note right "+compoundname+"#00ffff: "+line)
       return ret
+   def SecondFormat(functionbody, compoundname):
+      def Nest(nest):
+         return ("  "*nest)
+      def AlignRight(text):
+         return (((" "*50)+text)[-50:])
+      ret = []
+      nest = 0
+      for line in functionbody:
+         if (result := re.fullmatch("(alt )(.*\n)", line, re.S)) != None:
+            ret.append(AlignRight(result.group(1))+Nest(nest)+result.group(2))
+            nest += 1
+         elif (result := re.fullmatch("(else )(.*\n)", line, re.S)) != None:
+            ret.append(AlignRight(result.group(1))+Nest(nest-1)+result.group(2))
+         elif (result := re.fullmatch("(end )(.*\n)", line, re.S)) != None:
+            nest -= 1
+            ret.append(AlignRight(result.group(1))+Nest(nest)+result.group(2))
+         elif (result := re.fullmatch("(.*: )(.*\n)", line, re.S)) != None:
+            ret.append(AlignRight(result.group(1))+Nest(nest)+result.group(2))
+      return ret
    functionbody = RemoveEmpty(functionbody, compoundname)
-   functionbody = Format(functionbody, compoundname)
+   functionbody = FirstFormat(functionbody, compoundname)
    functionbody = RemoveFunctionBlock(functionbody, compoundname)
    functionbody = AddPlantUMLSentence(functionbody, compoundname)
+   functionbody = SecondFormat(functionbody, compoundname)
    return functionbody
 #============================================================================================================================================================
 if __name__ == '__main__':
