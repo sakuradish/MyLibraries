@@ -18,15 +18,19 @@ class MyLogger:
         logging.VERBOSE = 15 # DEBUGとINFOの間
         logging.NOTICE = 25 # INFOとWARNINGの間
         logging.SUCCESS = 35 # WARNINGとERRORの間
+        logging.SAKURA = 99 # 一番上
         logging.addLevelName(logging.SPAM, 'SPAM')
         logging.addLevelName(logging.VERBOSE, 'VERBOSE')
         logging.addLevelName(logging.NOTICE, 'NOTICE')
         logging.addLevelName(logging.SUCCESS, 'SUCCESS')
+        logging.addLevelName(logging.SAKURA, 'SAKURA')
         setattr(logger, 'spam', lambda message, *args: logger._log(logging.SPAM, message, args))
         setattr(logger, 'verbose', lambda message, *args: logger._log(logging.VERBOSE, message, args))
         setattr(logger, 'notice', lambda message, *args: logger._log(logging.NOTICE, message, args))
         setattr(logger, 'success', lambda message, *args: logger._log(logging.SUCCESS, message, args))
+        setattr(logger, 'sakura', lambda message, *args: logger._log(logging.SAKURA, message, args))
         # 自作ログ関数を噛ませるために、オリジナルを保存
+        self.origin_sakura = logger.sakura
         self.origin_critical = logger.critical
         self.origin_error = logger.error
         self.origin_success = logger.success
@@ -56,6 +60,7 @@ class MyLogger:
                                             'error': {'color': 'red'},
                                             'debug': {'color': 'green'},
                                             'warning': {'color': 'yellow'},
+                                            'sakura': {'color': 200, 'bold': True},
                                             }
         coloredlogs.install(level=level, logger=logger,
                             fmt='[ %(asctime)s ][ %(levelname)8s ][ %(funcName)6s ][ %(message)s ]', datefmt='%Y/%m/%d %H:%M:%S')
@@ -131,13 +136,12 @@ class MyLogger:
         self.numerator = str(numerator)
 # ===================================================================================
     ## @brief 進捗率分母登録
+    # @note
+    # 新しい分母設定時(新しいFor文の処理に移るときなどを想定)には、
+    # 分子をリセットする。
     def SetFraction(self, fraction):
-        self.fraction = str(fraction)
-# ===================================================================================
-    ## @brief 進捗率リセット
-    def ResetProgress(self):
         self.numerator = ''
-        self.fraction = ''
+        self.fraction = str(fraction)
 # ===================================================================================
     ## @brief 開始ログ出力
     def start(self, filename, funcname):
@@ -168,6 +172,13 @@ class MyLogger:
         del stack['start']
         self.debug(stack)
         self.stacklevel -= 1
+# ===================================================================================
+    ## @brief sakuraレベルログ
+    def sakura(self, *args, **kwargs):
+        msg = ''
+        for arg in args:
+            msg += str(arg)
+        self.origin_sakura(msg, **kwargs)
 # ===================================================================================
     ## @brief criticalレベルログ
     def critical(self, *args, **kwargs):
@@ -253,7 +264,7 @@ if __name__ == '__main__':
         for i in range(10):
             MyLogger.SetNumerator(i)
             MyLogger.success('logging with progress')
-        MyLogger.ResetProgress()
+        MyLogger.sakura('This is SAKURA. (99)')
         MyLogger.critical('This is CRITICAL. (50)')
         MyLogger.error('This is ERROR. (40)')
         MyLogger.success('This is SUCCESS. (35)')
