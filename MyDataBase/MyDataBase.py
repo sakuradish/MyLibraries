@@ -66,6 +66,8 @@ class MyDataBase():
     @MyLogger.deco
     def DFRead(self):
         self.df = pd.read_excel(self.datapath, engine='openpyxl')
+        self.columns = list(self.df.columns)[2:]
+        self.rows = list(self.df.index)
 # ===================================================================================
     ## @brief データフレームをxlsxに書き込み
     # @note
@@ -88,22 +90,26 @@ class MyDataBase():
 # ===================================================================================
     ## @brief データフレームを指定列と値でフィルタ
     @MyLogger.deco
-    def DFFilter(self, column, value):
-        self.df = self.df[self.df[column].str.contains(value)]
+    def DFFilter(self, column, value, mode='contains'):
+        if mode=='contains':
+            self.df = self.df[self.df[column].str.contains(value)]
+        else: #if mode='fullmatch':
+            self.df = self.df[self.df[column].str.fullmatch(value)]
 # ===================================================================================
     ## @brief データフレームに行を追加
     @MyLogger.deco
     def DFAppendRow(self, row):
         # サイズが一致しない場合、仮の列名を追加
-        while len(row) > len(self.GetColumns()):
+        while len(row) > len(self.columns):
             self.DFAppendColumn(['UnknownColumn'+str(len(self.df.columns))])
         # 行追加
         dt = datetime.datetime.now()
         temp = {'timestamp/date':dt.strftime("%Y/%m/%d"),
                 'timestamp/time':dt.strftime('%X')}
-        for k,v in zip(self.GetColumns(), row):
+        for k,v in zip(self.columns, row):
             temp[k] = v
         self.df = self.df.append(temp, ignore_index=True)
+        self.rows = list(self.df.index)
 # ===================================================================================
     ## @brief データフレームに列を追加
     @MyLogger.deco
@@ -113,7 +119,7 @@ class MyDataBase():
                 self.df.insert(len(self.df.columns), column, value)
             else:
                 MyLogger.warning('column ', column, ' is already exist')
-        self.DFWrite()
+        self.columns = list(self.df.columns)[2:]
 # ===================================================================================
     ## @brief 指定列だけ取り出し
     @MyLogger.deco
@@ -125,12 +131,14 @@ class MyDataBase():
     # Timestamp用の列を意識しなくていいように削除して渡す。
     @MyLogger.deco
     def GetColumns(self):
-        return list(self.df.columns)[2:]
+        self.columns = list(self.df.columns)[2:]
+        return self.columns
 # ===================================================================================
     ## @brief データフレーム行indexを取得
     @MyLogger.deco
     def GetRows(self):
-        return list(self.df.index)
+        self.rows = list(self.df.index)
+        return self.rows
 # ===================================================================================
     ## @brief データフレームを辞書型に変換して取得
     @MyLogger.deco
@@ -157,6 +165,7 @@ class MyDataBase():
         for row in self.df.to_dict('index').values():
             isFirstColumn = True
             for value in row.values():
+                value = str(value)
                 if isFirstColumn:
                     ret += value
                     isFirstColumn = False
@@ -174,14 +183,11 @@ class MyDataBase():
     @MyLogger.deco
     def AddCallbackOnWrite(self, callback):
         self.OnWriteCallback.append(callback)
-        MyLogger.critical(self.OnWriteCallback)
 # ===================================================================================
     ## @brief Excel更新時のコールバック呼び出し
     @MyLogger.deco
     def OnWrite(self):
-        MyLogger.critical(self.OnWriteCallback)
         for callback in self.OnWriteCallback:
-            MyLogger.critical(callback)
             callback()
 # ===================================================================================
 if __name__ == '__main__':
