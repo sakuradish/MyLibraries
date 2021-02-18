@@ -92,9 +92,9 @@ class MyDataBase():
     @MyLogger.deco
     def DFFilter(self, column, value, mode='contains'):
         if mode=='contains':
-            self.df = self.df[self.df[column].str.contains(value)]
+            self.df = self.df[self.df[column].astype(str).str.contains(value)]
         else: #if mode='fullmatch':
-            self.df = self.df[self.df[column].str.fullmatch(value)]
+            self.df = self.df[self.df[column].astype(str).str.fullmatch(value)]
 # ===================================================================================
     ## @brief データフレームに行を追加
     @MyLogger.deco
