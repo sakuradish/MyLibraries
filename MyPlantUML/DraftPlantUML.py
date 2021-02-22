@@ -174,6 +174,12 @@ class MyPlantUML():
             # ラムダ式で引っ掛からないようにする
             elif len(re.findall("\(", buf))-len(re.findall("\)", buf)) != 0:
                continue
+            # elseマッチャー # コメントとかforとかよりも優先度高めにする必要あり
+            elif (result := re.fullmatch("(else.*{)", buf, re.S)):
+               index = -1
+               while ret[index] != "}\n":
+                  index -= 1
+               ret[index] = ret[index].replace("\n","") + " " + result.group(1).replace("\n", "") + "\n"
             # 関数宣言マッチャー # ifとかforもマッチするはず
             elif (result := re.fullmatch("(.*\(.*\).*\{)", buf, re.S)):
                ret.append(result.group(1).replace("\n", "") + "\n")
@@ -195,12 +201,6 @@ class MyPlantUML():
             # プリプロセッサーマッチャー
             elif (result := re.fullmatch("(#.*\n)", buf, re.S)):
                ret.append(result.group(1).replace("\n", "") + "\n")
-            # elseマッチャー
-            elif (result := re.fullmatch("(else.*{)", buf, re.S)):
-               index = -1
-               while ret[index] != "}\n":
-                  index -= 1
-               ret[index] = ret[index].replace("\n","") + " " + result.group(1).replace("\n", "") + "\n"
             else:
                continue
             # どこかでマッチしてたらbuf初期化
@@ -243,10 +243,10 @@ class MyPlantUML():
             elif re.fullmatch("(#endif.*\n)", line, re.S):
                ret.append("end "+line)
             # ブロック系
-            elif re.fullmatch("(.*\(.*\).*\{\n)", line, re.S):
-               ret.append("alt "+line)
             elif re.fullmatch("(}.*else.*\{\n)", line, re.S):
                ret.append("else "+line)
+            elif re.fullmatch("(.*\(.*\).*\{\n)", line, re.S):
+               ret.append("alt "+line)
             elif re.fullmatch("(case.*:\n)", line, re.S):
                ret.append("else "+line)
             elif re.fullmatch("(}\n)", line, re.S):
