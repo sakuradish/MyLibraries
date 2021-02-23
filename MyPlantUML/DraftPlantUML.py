@@ -52,8 +52,8 @@ class MyPlantUML():
    @MyLogger.deco
    def AnalyzeDoxygen(self, doxygenpath):
       self.db_functions.DBRead()
-      # files = [file for file in glob.glob(doxygenpath+'/**/*', recursive=True) if file.find('class_') != -1]
-      files = [file for file in glob.glob(doxygenpath+'/**/*', recursive=True) if file.find('.xml') != -1]
+      files = [file for file in glob.glob(doxygenpath+'/**/*', recursive=True) if file.find('class_') != -1]
+      # files = [file for file in glob.glob(doxygenpath+'/**/*', recursive=True) if file.find('.xml') != -1]
       self.temp_dict = self.db_functions.GetDict()
       MyLogger.SetFraction(len(files))
       for file in files:
@@ -281,27 +281,26 @@ class MyPlantUML():
       #============================================================================================================================================================
       def __SecondFormat(functionbody, compoundname):
          def __Nest(nest):
-            return "\t"+("\t"*nest)
-         def __AlignRight(text=""):
-            maxlen = len("note right "+compoundname+"#00ffff: ")
-            return (((" "*maxlen)+text)[-maxlen:])
+            return ("  "*nest)
          ret = []
          nest = 0
          for line in functionbody:
             if (result := re.fullmatch("(alt )(.*\n)", line, re.S)) != None:
-               ret.append(__AlignRight(result.group(1))+__Nest(nest)+result.group(2))
+               ret.append(__Nest(nest)+line)
                nest += 1
             elif (result := re.fullmatch("(else )(.*\n)", line, re.S)) != None:
-               ret.append(__AlignRight(result.group(1))+__Nest(nest-1)+result.group(2))
+               nest -= 1
+               ret.append(__Nest(nest)+line)
+               nest += 1
             elif (result := re.fullmatch("(end )(.*\n)", line, re.S)) != None:
                nest -= 1
-               ret.append(__AlignRight(result.group(1))+__Nest(nest)+result.group(2))
+               ret.append(__Nest(nest)+line)
             elif (result := re.fullmatch("([^:]*: )(.*\n)", line, re.S)) != None:
-               ret.append(__AlignRight(result.group(1))+__Nest(nest)+result.group(2))
+               ret.append(__Nest(nest)+line)
             elif re.fullmatch("('.*\n)", line, re.S):
-               ret.append(__AlignRight()+__Nest(nest)+line)
+               ret.append(__Nest(nest)+line)
             elif re.fullmatch("([\w.]+->[\w.]*:[\w]+\n)", line, re.S):
-               ret.append(__AlignRight()+__Nest(nest)+line)
+               ret.append(__Nest(nest)+line)
          return ret
       #============================================================================================================================================================
       functionbody = __RemoveEmpty(functionbody, compoundname)
