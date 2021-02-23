@@ -64,19 +64,19 @@ class MyLogger:
                                             'sakura': {'color': 200, 'bold': True},
                                             }
         coloredlogs.install(level=level, logger=logger,
-                            fmt='[ %(asctime)s ][ %(levelname)8s ][ %(funcName)6s ][ %(message)s ]', datefmt='%Y/%m/%d %H:%M:%S')
+                            fmt='[ %(asctime)s ][ %(levelname)8s ][ %(funcName)6s ][ %(message)s ]', datefmt='%H:%M:%S')
         # ログをファイル出力
         basedir = os.path.dirname(os.path.abspath(__file__))
         if not os.path.exists(basedir+'/log/'):
             os.makedirs(basedir+'/log/')
         handler = logging.FileHandler(basedir+'/log/output.log', 'w', 'utf-8')
         handler.setFormatter(logging.Formatter(
-            '[ %(asctime)s ][ %(levelname)8s ][ %(funcName)6s ][ %(message)s ]', datefmt='%Y/%m/%d %H:%M:%S'))
+            '[ %(asctime)s ][ %(levelname)8s ][ %(funcName)6s ][ %(message)s ]', datefmt='%H:%M:%S'))
         logger.addHandler(handler)
         # BrowserLogging用にHTMLフォーマットでもファイル出力
         handler = logging.FileHandler(basedir+'/log/output.html', 'w', 'utf-8')
         handler.setFormatter(logging.Formatter(
-            '<div>[ <span class="asctime">%(asctime)s</span> ][ <span class="levelname">%(levelname)8s</span> ][ <span class="funcName">%(funcName)6s</span> ][ <span class="%(levelname)s"> %(message)s</span> ]</div>', datefmt='%Y/%m/%d %H:%M:%S'))
+            '<div>[ <span class="asctime">%(asctime)s</span> ][ <span class="levelname">%(levelname)8s</span> ][ <span class="funcName">%(funcName)6s</span> ][ <span class="%(levelname)s"> %(message)s</span> ]</div>', datefmt='%H:%M:%S'))
         logger.addHandler(handler)
         # メンバ変数初期化
         self.stack = {}
