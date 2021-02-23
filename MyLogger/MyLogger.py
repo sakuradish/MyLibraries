@@ -84,7 +84,7 @@ class MyLogger:
         self.numerator = ''
         self.fraction = ''
         # 初期化処理のログ
-        self.info('level is ', level)
+        self.info('level is', level)
         self.info(basedir+'/log/output.log')
         self.info(basedir+'/log/output.html')
 # ===================================================================================
@@ -198,70 +198,70 @@ class MyLogger:
     def sakura(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_sakura(msg, **kwargs)
 # ===================================================================================
     ## @brief criticalレベルログ
     def critical(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_critical(msg, **kwargs)
 # ===================================================================================
     ## @brief errorレベルログ
     def error(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_error(msg, **kwargs)
 # ===================================================================================
     ## @brief successレベルログ
     def success(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_success(msg, **kwargs)
 # ===================================================================================
     ## @brief warningレベルログ
     def warning(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_warning(msg, **kwargs)
 # ===================================================================================
     ## @brief noticeレベルログ
     def notice(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_notice(msg, **kwargs)
 # ===================================================================================
     ## @brief infoレベルログ
     def info(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_info(msg, **kwargs)
 # ===================================================================================
     ## @brief verboseレベルログ
     def verbose(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_verbose(msg, **kwargs)
 # ===================================================================================
     ## @brief debugレベルログ
     def debug(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_debug(msg, **kwargs)
 # ===================================================================================
     ## @brief spamレベルログ
     def spam(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg) + "\t"
+            msg += str(arg) + " "
         self.origin_spam(msg, **kwargs)
 # ===================================================================================
     ## @brief ログ出力
