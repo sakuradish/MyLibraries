@@ -120,7 +120,7 @@ class MyLogger:
                 return ret
             except Exception as e:
                 for i in range(1,self.stacklevel+1,1):
-                    stack = self.stack[self.stacklevel].copy()
+                    stack = self.stack[i].copy()
                     del stack['start']
                     self.critical(stack)
                 self.critical(type(e))
@@ -143,7 +143,9 @@ class MyLogger:
                 return ret
             except Exception as e:
                 for i in range(1,self.stacklevel+1,1):
-                    self.critical(self.stack[i])
+                    stack = self.stack[i].copy()
+                    del stack['start']
+                    self.critical(stack)
                 self.critical(type(e))
                 self.critical(e)
                 self.critical(traceback.format_exc())
