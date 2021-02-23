@@ -12,17 +12,22 @@
 # サンプルコード
 ```python
 if __name__ == '__main__':
-    db = MyDataBase.GetInstance('task.xlsx')
-    db.DFAppendColumn(['data/project', 'data/task', 'data/status'])
-    db.DFAppendRow(['プロジェクトX','洗濯','OPEN'])
-    db.DFAppendRow(['プロジェクトX','家事','DOING'])
-    db.DFAppendRow(['プロジェクトY','会議','DONE'])
-    db.DFAppendRow(['プロジェクトY','営業','OPEN'])
-    MyLogger.success(db.GetColumns())
-    MyLogger.success(db.GetDict())
-    MyLogger.success(db.GetStr())
-    MyLogger.success(db.GetHTML())
-    db.DFSort('data/status', ascending=False)
-    db.DFDropDuplicates('data/project')
-    db.DFWrite()
+    @MyLogger.deco
+    def main():
+        db = MyDataBase.GetInstance('MyDataBaseSample.xlsx')
+        db.DBAppendColumn(['data/column1', 'data/column2', 'data/column3'])
+        MyLogger.SetFraction(100)
+        dict = db.GetDict()
+        for i in range(100):
+            MyLogger.SetNumerator(i)
+            db.DBAppendRow([str(i),str(i),str(i)], dict)
+        db.DBImportDict(dict)
+        MyLogger.success(db.GetColumns())
+        MyLogger.success(db.GetDict())
+        MyLogger.success(db.GetStr())
+        MyLogger.success(db.GetHTML())
+        db.DBSort('data/column3', ascending=False)
+        db.DBDropDuplicates('data/column3')
+        db.DBWrite()
+    main()
 ```

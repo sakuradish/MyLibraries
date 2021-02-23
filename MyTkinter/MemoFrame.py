@@ -21,7 +21,7 @@ class MemoFrame(tk.Frame):
     def __init__(self,master,**kw):
         super().__init__(master,**kw)
         self.memodata = MyDataBase.GetInstance("memo.xlsx")
-        self.memodata.DFAppendColumn(['data/project', 'data/task', 'data/memo'])
+        self.memodata.DBAppendColumn(['data/project', 'data/task', 'data/memo'])
         self.memodata.AddCallbackOnWrite(self.OnWrite)
         self.Draw()
 # ===================================================================================
@@ -32,11 +32,11 @@ class MemoFrame(tk.Frame):
         self.comboboxes = WidgetFactory.NewCombobox(self, columns, 0,0.05,1,0.05, "ToRight")
         for column,widget in self.comboboxes['widgets'].items():
             widget['instance'].SetText('')
-            self.memodata.DFRead()
-            self.memodata.DFDropDuplicates(column)
+            self.memodata.DBRead()
+            self.memodata.DBDropDuplicates(column)
             values = self.memodata.GetListByColumn(column)
             widget['instance'].SetValues(values)
-        self.memodata.DFRead()
+        self.memodata.DBRead()
         self.text = WidgetFactory.NewText(self, ['text'], 0,0.1,1,0.9, "ToRight")
         self.text['widgets']['text']['instance'].SetText(self.memodata)
 # ===================================================================================
@@ -45,10 +45,10 @@ class MemoFrame(tk.Frame):
         if event.keysym == 'Return':
             print(WidgetFactory.HasFocus(self.comboboxes['id'] , self.master.focus_get()))
             if WidgetFactory.HasFocus(self.comboboxes['id'] , self.master.focus_get()):
-                self.memodata.DFRead()
+                self.memodata.DBRead()
                 columns = self.memodata.GetColumns()
                 for column in columns:
-                    self.memodata.DFFilter(column, self.comboboxes['widgets'][column]['instance'].GetText())
+                    self.memodata.DBFilter(column, self.comboboxes['widgets'][column]['instance'].GetText())
                 self.text['widgets']['text']['instance'].SetText(self.memodata)
 # ===================================================================================
     @MyLogger.deco

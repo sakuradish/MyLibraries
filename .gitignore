@@ -6,5 +6,8 @@
 /MyPlantUML/input/*
 /MyPlantUML/output/*
 /MyPlantUML/docs/*
+/MyPlantUML/input.pu
+/MyPlantUML/output.pu
+/MyPlantUML/output.svg
 /MyMusicCenter/data/*
 !.gitkeep

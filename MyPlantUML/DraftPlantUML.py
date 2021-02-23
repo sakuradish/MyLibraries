@@ -6,7 +6,7 @@ from MyLogger import MyLogger
 MyLogger = MyLogger.GetInstance()
 from MyDataBase import MyDataBase
 # db_defines = MyDataBase.GetInstance('plantuml_defines.xlsx')
-# db_defines.DFAppendColumn(['compoundname', 'name', 'params', 'initializer', 'bodyfile', 'bodystart', 'bodyend']) #仮
+# db_defines.DBAppendColumn(['compoundname', 'name', 'params', 'initializer', 'bodyfile', 'bodystart', 'bodyend']) #仮
 #============================================================================================================================================================
 import re
 import os
@@ -33,29 +33,32 @@ class MyPlantUML():
 #============================================================================================================================================================
    @MyLogger.deco
    def InitializeColumn(self):
-      self.db_functions.DFAppendColumn(['compoundname', 'definition', 'argsstring', 'name', 'samenamecnt', 'bodyfile', 'bodystart', 'bodyend'])
-      self.db_functions.DFWrite()
+      self.db_functions.DBAppendColumn(['compoundname', 'definition', 'argsstring', 'name', 'samenamecnt', 'bodyfile', 'bodystart', 'bodyend'])
+      # MyLogger.sakura(self.db_functions.GetDict())
+      self.db_functions.DBWrite()
 #============================================================================================================================================================
    @MyLogger.deco
    def LoadFunctionList(self):
-      self.db_functions.DFRead()
-      self.db_functions.DFDropDuplicates('name')
-      self.db_functions.DFFilter('samenamecnt', "1", mode='fullmatch')
+      self.db_functions.DBRead()
+      self.db_functions.DBDropDuplicates('name')
+      self.db_functions.DBFilter('samenamecnt', "1", mode='fullmatch')
       self.unique_functions = self.db_functions.GetDict().values()
       # MyLogger.sakura(self.unique_functions)
-      self.db_functions.DFRead()
+      self.db_functions.DBRead()
       self.all_functions = self.db_functions.GetDict()
 #============================================================================================================================================================
    @MyLogger.deco
    def AnalyzeDoxygen(self, doxygenpath):
-      self.db_functions.DFRead()
-      files = [file for file in glob.glob(doxygenpath+'/**/*', recursive=True) if file.find('class_') != -1]
-      # files = [file for file in glob.glob(doxygenpath+'/**/*', recursive=True) if file.find('.xml') != -1]
+      self.db_functions.DBRead()
+      # files = [file for file in glob.glob(doxygenpath+'/**/*', recursive=True) if file.find('class_') != -1]
+      files = [file for file in glob.glob(doxygenpath+'/**/*', recursive=True) if file.find('.xml') != -1]
+      self.temp_dict = self.db_functions.GetDict()
       MyLogger.SetFraction(len(files))
       for file in files:
          MyLogger.SetNumerator(files.index(file))
          self.__ParseFunctions(file)
-      self.db_functions.DFWrite()
+      self.db_functions.DBImportDict(self.temp_dict)
+      self.db_functions.DBWrite()
       self.LoadFunctionList()
 #============================================================================================================================================================
    @MyLogger.deco
@@ -84,8 +87,7 @@ class MyPlantUML():
             self.samenamecnt[name] = 1
          else:
             self.samenamecnt[name] += 1
-         MyLogger.sakura(name,"[",self.samenamecnt[name],"]")
-         self.db_functions.DFAppendRow([compoundname, definition, argsstring, name, self.samenamecnt[name], bodyfile, bodystart, bodyend])
+         self.db_functions.DBAppendRow([compoundname, definition, argsstring, name, self.samenamecnt[name], bodyfile, bodystart, bodyend], self.temp_dict)
 #============================================================================================================================================================
 # @MyLogger.deco
 # def ParseDefines(xmlpath):
@@ -107,7 +109,7 @@ class MyPlantUML():
 #       bodyfile = location['bodyfile']
 #       bodystart = location['bodystart']
 #       bodyend = location['bodyend']
-#       db_defines.DFAppendRow([compoundname, name, params, initializer, bodyfile, bodystart, bodyend])
+#       db_defines.DBAppendRow([compoundname, name, params, initializer, bodyfile, bodystart, bodyend])
 #============================================================================================================================================================
    @MyLogger.deco
    def DraftUML(self):
@@ -378,8 +380,8 @@ def myopen(filepath, mode, encoding=''):
 #============================================================================================================================================================
 if __name__ == '__main__':
    uml = MyPlantUML()
-   # uml.AnalyzeDoxygen('./docs/xml/')
-   # uml.DraftUML()
-   uml.SetIgnoreFunction(['begin'])
-   uml.CombineUML(path)
+   uml.AnalyzeDoxygen('./docs/xml/')
+   uml.DraftUML()
+   # uml.SetIgnoreFunction(['begin'])
+   # uml.CombineUML(path)
 #============================================================================================================================================================

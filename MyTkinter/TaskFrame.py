@@ -16,9 +16,9 @@ class TaskFrame(tk.Frame):
     def __init__(self,master,**kw):
         super().__init__(master,**kw)
         self.taskdata = MyDataBase.GetInstance("task.xlsx")
-        self.taskdata.DFAppendColumn(['data/project', 'data/task', 'data/status'])
+        self.taskdata.DBAppendColumn(['data/project', 'data/task', 'data/status'])
         self.memodata = MyDataBase.GetInstance("memo.xlsx")
-        self.memodata.DFAppendColumn(['data/project', 'data/task', 'data/memo'])
+        self.memodata.DBAppendColumn(['data/project', 'data/task', 'data/memo'])
         self.inputfield = {}
         self.filterfield = {}
         self.viewerfield = {}
@@ -55,10 +55,10 @@ class TaskFrame(tk.Frame):
             WidgetFactory.Destroy(self.viewerfield['data/task']['id'])
         if 'data/status' in self.viewerfield:
             WidgetFactory.Destroy(self.viewerfield['data/status']['id'])
-        self.taskdata.DFRead()
-        self.taskdata.DFDropDuplicates('data/task')
+        self.taskdata.DBRead()
+        self.taskdata.DBDropDuplicates('data/task')
         for column,widget in self.filterfield['combobox']['widgets'].items():
-            self.taskdata.DFFilter(column, widget['instance'].GetText())
+            self.taskdata.DBFilter(column, widget['instance'].GetText())
         rows = self.taskdata.GetRows()
         MyLogger.critical(self.taskdata.df)
         MyLogger.critical(self.taskdata.df.index)
@@ -69,10 +69,10 @@ class TaskFrame(tk.Frame):
         # memofield
         if 'combobox' in self.memofield:
             WidgetFactory.Destroy(self.memofield['combobox']['id'])
-        self.taskdata.DFRead()
-        self.taskdata.DFDropDuplicates('data/task')
+        self.taskdata.DBRead()
+        self.taskdata.DBDropDuplicates('data/task')
         for column,widget in self.filterfield['combobox']['widgets'].items():
-            self.taskdata.DFFilter(column, widget['instance'].GetText())
+            self.taskdata.DBFilter(column, widget['instance'].GetText())
         rows = self.taskdata.GetRows()
         self.memofield['combobox'] = WidgetFactory.NewCombobox(self, rows, 0.8,0.35,0.2,0.65, "ToBottom")
 # ===================================================================================
@@ -81,18 +81,18 @@ class TaskFrame(tk.Frame):
         # inputfield
         columns = self.taskdata.GetColumns()
         for column,widget in self.inputfield['combobox']['widgets'].items():
-            self.taskdata.DFRead()
-            self.taskdata.DFDropDuplicates(column)
+            self.taskdata.DBRead()
+            self.taskdata.DBDropDuplicates(column)
             values = self.taskdata.GetListByColumn(column)
             widget['instance'].SetValues(values)
         # filterfield
         for column,widget in self.filterfield['combobox']['widgets'].items():
-            self.taskdata.DFRead()
-            self.taskdata.DFDropDuplicates(column)
+            self.taskdata.DBRead()
+            self.taskdata.DBDropDuplicates(column)
             values = self.taskdata.GetListByColumn(column)
             widget['instance'].SetValues(values)
         # viewerfield
-        self.taskdata.DFRead()
+        self.taskdata.DBRead()
         for row,widget in self.viewerfield['data/project']['widgets'].items():
             values = self.taskdata.GetListByColumn(columns[0])
             widget['instance'].SetText(values[row])
@@ -103,7 +103,7 @@ class TaskFrame(tk.Frame):
             values = self.taskdata.GetListByColumn(columns[2])
             widget['instance'].SetText(values[row])
         for row,widget in self.viewerfield['data/status']['widgets'].items():
-            self.taskdata.DFDropDuplicates(columns[2])
+            self.taskdata.DBDropDuplicates(columns[2])
             widget['instance'].SetValues(self.taskdata.GetListByColumn(columns[2]))
         # memofield
         for row,widget in self.memofield['combobox']['widgets'].items():
@@ -116,9 +116,9 @@ class TaskFrame(tk.Frame):
                 data = []
                 for column,widget in self.inputfield['combobox']['widgets'].items():
                     data.append(widget['instance'].GetText())
-                self.taskdata.DFRead()
-                self.taskdata.DFAppendRow(data)
-                self.taskdata.DFWrite()
+                self.taskdata.DBRead()
+                self.taskdata.DBAppendRow(data)
+                self.taskdata.DBWrite()
                 # 入力欄空にしたい
                 # InitializeStaticWidget呼ぶとfilterも空になっちゃうので仮実装
                 for column,widget in self.inputfield['combobox']['widgets'].items():
@@ -134,9 +134,9 @@ class TaskFrame(tk.Frame):
                 task = self.viewerfield['data/task']['widgets'][focused]['instance'].GetText()
                 status = self.viewerfield['data/status']['widgets'][focused]['instance'].GetText()
                 MyLogger.critical(project,task,status)
-                self.taskdata.DFRead()
-                self.taskdata.DFAppendRow([project,task,status])
-                self.taskdata.DFWrite()
+                self.taskdata.DBRead()
+                self.taskdata.DBAppendRow([project,task,status])
+                self.taskdata.DBWrite()
                 self.InitializeDynamicWidget()
                 self.Draw()
             focused = WidgetFactory.HasFocus(self.memofield['combobox']['id'] , self.master.focus_get())
@@ -145,9 +145,9 @@ class TaskFrame(tk.Frame):
                 task = self.viewerfield['data/task']['widgets'][focused]['instance'].GetText()
                 memo = self.memofield['combobox']['widgets'][focused]['instance'].GetText()
                 MyLogger.critical(project,task,memo)
-                self.memodata.DFRead()
-                self.memodata.DFAppendRow([project,task,memo])
-                self.memodata.DFWrite()
+                self.memodata.DBRead()
+                self.memodata.DBAppendRow([project,task,memo])
+                self.memodata.DBWrite()
                 # self.InitializeDynamicWidget()
                 self.Draw()
 # ===================================================================================
