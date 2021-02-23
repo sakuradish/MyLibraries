@@ -2,11 +2,11 @@
 import sys
 sys.path.append('../MyLogger/')
 sys.path.append('../MyDataBase/')
+sys.path.append('../MyBaseSystem/')
 from MyLogger import MyLogger
 MyLogger = MyLogger.GetInstance()
 from MyDataBase import MyDataBase
-# db_defines = MyDataBase.GetInstance('plantuml_defines.xlsx')
-# db_defines.DBAppendColumn(['compoundname', 'name', 'params', 'initializer', 'bodyfile', 'bodystart', 'bodyend']) #仮
+from MyBaseSystem import *
 #============================================================================================================================================================
 import re
 import os
@@ -22,9 +22,10 @@ class MyPlantUML():
       self.inputbase='./input/'
       self.outputbase='./output/'
       self.db_functions = MyDataBase.GetInstance('plantuml_functions.xlsx')
+      self.db_defines = MyDataBase.GetInstance('plantuml_defines.xlsx')
       self.ignore_functions = []
-      self.InitializeColumn()
-      self.LoadFunctionList()
+      self.__InitializeColumn()
+      self.__LoadFunctionList()
 #============================================================================================================================================================
    @MyLogger.deco
    def SetIgnoreFunction(self, functions):
@@ -32,13 +33,14 @@ class MyPlantUML():
       MyLogger.sakura(self.ignore_functions)
 #============================================================================================================================================================
    @MyLogger.deco
-   def InitializeColumn(self):
+   def __InitializeColumn(self):
+      self.db_defines.DBAppendColumn(['compoundname', 'name', 'params', 'initializer', 'bodyfile', 'bodystart', 'bodyend'])
+      self.db_defines.DBWrite()
       self.db_functions.DBAppendColumn(['compoundname', 'definition', 'argsstring', 'name', 'samenamecnt', 'bodyfile', 'bodystart', 'bodyend'])
-      # MyLogger.sakura(self.db_functions.GetDict())
       self.db_functions.DBWrite()
 #============================================================================================================================================================
    @MyLogger.deco
-   def LoadFunctionList(self):
+   def __LoadFunctionList(self):
       self.db_functions.DBRead()
       self.db_functions.DBDropDuplicates('name')
       self.db_functions.DBFilter('samenamecnt', "1", mode='fullmatch')
@@ -57,9 +59,10 @@ class MyPlantUML():
       for file in files:
          MyLogger.SetNumerator(files.index(file))
          self.__ParseFunctions(file)
+         # self.__ParseDefines(file)
       self.db_functions.DBImportDict(self.temp_dict)
       self.db_functions.DBWrite()
-      self.LoadFunctionList()
+      self.__LoadFunctionList()
 #============================================================================================================================================================
    @MyLogger.deco
    def __ParseFunctions(self, xmlpath):
@@ -89,27 +92,32 @@ class MyPlantUML():
             self.samenamecnt[name] += 1
          self.db_functions.DBAppendRow([compoundname, definition, argsstring, name, self.samenamecnt[name], bodyfile, bodystart, bodyend], self.temp_dict)
 #============================================================================================================================================================
-# @MyLogger.deco
-# def ParseDefines(xmlpath):
-#    xml = ''.join(myopen(xmlpath, 'r').readlines())
-#    soup = BeautifulSoup(xml, 'lxml')
-#    componddef = soup.find('compounddef')
-#    if not componddef:
-#       MyLogger.warning('not found compoundname in ', xmlpath)
-#       return
-#    compoundname = componddef.find('compoundname').text
-#    defines = componddef.find_all('memberdef', {'kind':'define'})
-#    for define in defines:
-#       name = define.find('name').text
-#       params = define.find_all('param')
-#       initializer = define.find('initializer').text
-#       if not location.has_attr('bodyfile'):
-#          MyLogger.warning('not found bodyfile of ', definition)
-#          continue
-#       bodyfile = location['bodyfile']
-#       bodystart = location['bodystart']
-#       bodyend = location['bodyend']
-#       db_defines.DBAppendRow([compoundname, name, params, initializer, bodyfile, bodystart, bodyend])
+   @MyLogger.deco
+   def __ParseDefines(self, xmlpath):
+      xml = ''.join(myopen(xmlpath, 'r').readlines())
+      soup = BeautifulSoup(xml, 'lxml')
+      componddef = soup.find('compounddef')
+      if not componddef:
+         MyLogger.warning('not found compoundname in ', xmlpath)
+         return
+      compoundname = componddef.find('compoundname').text
+      defines = componddef.find_all('memberdef', {'kind':'define'})
+      for define in defines:
+         name = define.find('name').text
+         if (params := define.find_all('param')):
+            MyLogger.sakura("name",name)
+            for param in params:
+               MyLogger.sakura("param",param.text)
+         if (initializer := define.find('initializer')):
+            initializer = initializer.text
+            MyLogger.sakura("initializer",initializer)
+         # if not location.has_attr('bodyfile'):
+         #    MyLogger.warning('not found bodyfile of ', definition)
+         #    continue
+         # bodyfile = location['bodyfile']
+         # bodystart = location['bodystart']
+         # bodyend = location['bodyend']
+         # db_defines.DBAppendRow([compoundname, name, params, initializer, bodyfile, bodystart, bodyend])
 #============================================================================================================================================================
    @MyLogger.deco
    def DraftUML(self):
@@ -156,7 +164,7 @@ class MyPlantUML():
    @MyLogger.deco
    def __CustomizeFunctionBody(self, functionbody, compoundname):
       #============================================================================================================================================================
-      def RemoveEmpty(functionbody, compoundname):
+      def __RemoveEmpty(functionbody, compoundname):
          ret = []
          for line in functionbody:
             line = line.strip(' ')
@@ -164,7 +172,7 @@ class MyPlantUML():
             ret.append(line)
          return ret
       #============================================================================================================================================================
-      def FirstFormat(functionbody, compoundname):
+      def __FirstFormat(functionbody, compoundname):
          ret = []
          buf = ''
          for char in ''.join(functionbody):
@@ -209,7 +217,7 @@ class MyPlantUML():
             buf = ''
          return ret
       #============================================================================================================================================================
-      def RemoveFunctionBlock(functionbody, compoundname):
+      def __RemoveFunctionBlock(functionbody, compoundname):
          ret = []
          blockcnt = 0
          for line in functionbody:
@@ -219,22 +227,22 @@ class MyPlantUML():
             blockcnt += len(re.findall("{", line))
          return ret
       #============================================================================================================================================================
-      def AddCallDependency(functionbody, compoundname):
-         def SearchFunctionInfo(function):
+      def __AddCallDependency(functionbody, compoundname):
+         def __SearchFunctionInfo(function):
             info = [info for info in self.unique_functions if info['name'] == function]
             return info[0] if info else {'compoundname':'', 'samenamecnt':''}
          ret = []
          for line in functionbody:
             if (results := re.findall("\w+\(", line, re.S)):
                for function in [result[:result.find("(")] for result in results]:
-                  info = SearchFunctionInfo(function)
+                  info = __SearchFunctionInfo(function)
                   if info['compoundname'] != '':
                      ret.append(compoundname+"->"+info['compoundname']+":"+function+"\n")
                   ret.append("' MyPlantUML["+compoundname+"->"+info['compoundname']+":"+function+"("+str(info['samenamecnt'])+")]\n")
             ret.append(line)
          return ret
       #============================================================================================================================================================
-      def AddPlantUMLSentence(functionbody, compoundname):
+      def __AddPlantUMLSentence(functionbody, compoundname):
          ret = []
          for line in functionbody:
             # プリプロセッサ系
@@ -271,44 +279,44 @@ class MyPlantUML():
                ret.append("note right "+compoundname+"#00ffff: "+line)
          return ret
       #============================================================================================================================================================
-      def SecondFormat(functionbody, compoundname):
-         def Nest(nest):
+      def __SecondFormat(functionbody, compoundname):
+         def __Nest(nest):
             return "\t"+("\t"*nest)
-         def AlignRight(text=""):
+         def __AlignRight(text=""):
             maxlen = len("note right "+compoundname+"#00ffff: ")
             return (((" "*maxlen)+text)[-maxlen:])
          ret = []
          nest = 0
          for line in functionbody:
             if (result := re.fullmatch("(alt )(.*\n)", line, re.S)) != None:
-               ret.append(AlignRight(result.group(1))+Nest(nest)+result.group(2))
+               ret.append(__AlignRight(result.group(1))+__Nest(nest)+result.group(2))
                nest += 1
             elif (result := re.fullmatch("(else )(.*\n)", line, re.S)) != None:
-               ret.append(AlignRight(result.group(1))+Nest(nest-1)+result.group(2))
+               ret.append(__AlignRight(result.group(1))+__Nest(nest-1)+result.group(2))
             elif (result := re.fullmatch("(end )(.*\n)", line, re.S)) != None:
                nest -= 1
-               ret.append(AlignRight(result.group(1))+Nest(nest)+result.group(2))
+               ret.append(__AlignRight(result.group(1))+__Nest(nest)+result.group(2))
             elif (result := re.fullmatch("([^:]*: )(.*\n)", line, re.S)) != None:
-               ret.append(AlignRight(result.group(1))+Nest(nest)+result.group(2))
+               ret.append(__AlignRight(result.group(1))+__Nest(nest)+result.group(2))
             elif re.fullmatch("('.*\n)", line, re.S):
-               ret.append(AlignRight()+Nest(nest)+line)
+               ret.append(__AlignRight()+__Nest(nest)+line)
             elif re.fullmatch("([\w.]+->[\w.]*:[\w]+\n)", line, re.S):
-               ret.append(AlignRight()+Nest(nest)+line)
+               ret.append(__AlignRight()+__Nest(nest)+line)
          return ret
       #============================================================================================================================================================
-      functionbody = RemoveEmpty(functionbody, compoundname)
-      functionbody = FirstFormat(functionbody, compoundname)
-      functionbody = RemoveFunctionBlock(functionbody, compoundname)
-      functionbody = AddCallDependency(functionbody, compoundname)
-      functionbody = AddPlantUMLSentence(functionbody, compoundname)
-      functionbody = SecondFormat(functionbody, compoundname)
+      functionbody = __RemoveEmpty(functionbody, compoundname)
+      functionbody = __FirstFormat(functionbody, compoundname)
+      functionbody = __RemoveFunctionBlock(functionbody, compoundname)
+      functionbody = __AddCallDependency(functionbody, compoundname)
+      functionbody = __AddPlantUMLSentence(functionbody, compoundname)
+      functionbody = __SecondFormat(functionbody, compoundname)
       functionbody = '' if functionbody == [] else functionbody
       return functionbody
 #============================================================================================================================================================
    @MyLogger.deco
    def CombineUML(self, plantumlpath):
       #============================================================================================================================================================
-      def FindPlantUML(compoundname, name, samenamecnt):
+      def __FindPlantUML(compoundname, name, samenamecnt):
          MyLogger.sakura(compoundname," ", name," ", samenamecnt)
          for index,value in self.all_functions.items():
             if value['compoundname'] == compoundname and value['name'] == name and str(value['samenamecnt']) == samenamecnt:
@@ -317,7 +325,7 @@ class MyPlantUML():
                return self.outputbase+bodyfile+'/'+name+"("+samenamecnt+').pu'
          return ''
       #============================================================================================================================================================
-      def ExtractPlantUML(inputfile, outputfile):
+      def __ExtractPlantUML(inputfile, outputfile):
          isExtract = False
          with myopen(outputfile, 'w', encoding='utf-8') as output:
             # inputfileをループ
@@ -336,7 +344,7 @@ class MyPlantUML():
                   if function in self.ignore_functions:
                      output.write(input_line)
                      continue
-                  umlpath = FindPlantUML(modto, function, number)
+                  umlpath = __FindPlantUML(modto, function, number)
                   if umlpath == '' or not os.path.exists(umlpath):
                      MyLogger.warning('plantuml not found for : ',input_line.replace("\n",""))
                      output.write(input_line)
@@ -359,24 +367,8 @@ class MyPlantUML():
       outputfile = "./output.pu"
       # shutil.copy2(plantumlpath, outputfile)
       shutil.copy2(plantumlpath, inputfile)
-      while ExtractPlantUML(inputfile, outputfile) == True:
+      while __ExtractPlantUML(inputfile, outputfile) == True:
          shutil.copy2(outputfile, inputfile)
-#============================================================================================================================================================
-@MyLogger.deco
-def myopen(filepath, mode, encoding=''):
-   if mode == 'w':
-      return open(filepath, mode, encoding='utf-8')
-   elif encoding == '':
-      from chardet.universaldetector import UniversalDetector
-      detector = UniversalDetector()
-      with open(filepath, mode='rb') as f:
-         for binary in f:
-            detector.feed(binary)
-            if detector.done:
-                  break
-      detector.close()
-      encoding = detector.result['encoding']
-   return open(filepath, mode, encoding=encoding)
 #============================================================================================================================================================
 if __name__ == '__main__':
    uml = MyPlantUML()
