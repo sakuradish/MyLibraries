@@ -1,12 +1,13 @@
 # ===================================================================================
-import logging
-import coloredlogs
 import time
 import math
 import sys
 import os
+import logging
+import coloredlogs
 import inspect
 from memory_profiler import profile
+import traceback
 # ===================================================================================
 ## @brief loggingクラス
 class MyLogger:
@@ -112,10 +113,20 @@ class MyLogger:
         funcname = funcname[funcname.find('def ')+4:]
         funcname = funcname[:funcname.find('('):]
         def decowrapper(*args,**kwargs):
-            self.start(filename, funcname)
-            ret = func(*args,**kwargs)
-            self.finish()
-            return ret
+            try:
+                self.start(filename, funcname)
+                ret = func(*args,**kwargs)
+                self.finish()
+                return ret
+            except Exception as e:
+                for i in range(1,self.stacklevel+1,1):
+                    stack = self.stack[self.stacklevel].copy()
+                    del stack['start']
+                    self.critical(stack)
+                self.critical(type(e))
+                self.critical(e)
+                self.critical(traceback.format_exc())
+                sys.exit()
         return decowrapper
 # ===================================================================================
     ## @brief メモリ使用率表示付きDecorator
@@ -125,10 +136,18 @@ class MyLogger:
         funcname = funcname[funcname.find('def ')+4:]
         funcname = funcname[:funcname.find('('):]
         def decowrapper(*args,**kwargs):
-            self.start(filename, funcname)
-            ret = profile(func)(*args,**kwargs)
-            self.finish()
-            return ret
+            try:
+                self.start(filename, funcname)
+                ret = profile(func)(*args,**kwargs)
+                self.finish()
+                return ret
+            except Exception as e:
+                for i in range(1,self.stacklevel+1,1):
+                    self.critical(self.stack[i])
+                self.critical(type(e))
+                self.critical(e)
+                self.critical(traceback.format_exc())
+                sys.exit()
         return decowrapper
 # ===================================================================================
     ## @brief 進捗率分子登録
@@ -157,7 +176,7 @@ class MyLogger:
         self.stack[self.stacklevel]['level'] = levelString
         self.stack[self.stacklevel]['file'] = file
         self.stack[self.stacklevel]['func'] = func
-        self.stack[self.stacklevel]['start'] = math.floor(start)
+        self.stack[self.stacklevel]['start'] = round(start, 2)
         stack = self.stack[self.stacklevel].copy()
         del stack['start']
         self.debug(stack)
@@ -166,7 +185,7 @@ class MyLogger:
     def finish(self):
         for i in range(1,self.stacklevel+1,1):
             start = self.stack[i]['start']
-            elapsedTime = math.floor(time.time() - start)
+            elapsedTime = round(time.time() - start, 2)
             self.stack[i]['elapsedTime'] = elapsedTime
         stack = self.stack[self.stacklevel].copy()
         del stack['start']
@@ -177,70 +196,70 @@ class MyLogger:
     def sakura(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_sakura(msg, **kwargs)
 # ===================================================================================
     ## @brief criticalレベルログ
     def critical(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_critical(msg, **kwargs)
 # ===================================================================================
     ## @brief errorレベルログ
     def error(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_error(msg, **kwargs)
 # ===================================================================================
     ## @brief successレベルログ
     def success(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_success(msg, **kwargs)
 # ===================================================================================
     ## @brief warningレベルログ
     def warning(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_warning(msg, **kwargs)
 # ===================================================================================
     ## @brief noticeレベルログ
     def notice(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_notice(msg, **kwargs)
 # ===================================================================================
     ## @brief infoレベルログ
     def info(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_info(msg, **kwargs)
 # ===================================================================================
     ## @brief verboseレベルログ
     def verbose(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_verbose(msg, **kwargs)
 # ===================================================================================
     ## @brief debugレベルログ
     def debug(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_debug(msg, **kwargs)
 # ===================================================================================
     ## @brief spamレベルログ
     def spam(self, *args, **kwargs):
         msg = ''
         for arg in args:
-            msg += str(arg)
+            msg += str(arg) + "\t"
         self.origin_spam(msg, **kwargs)
 # ===================================================================================
     ## @brief ログ出力
@@ -249,8 +268,10 @@ class MyLogger:
     # 呼び出し元関数が良い感じにログに表示されるように
     # stacklevelを調整している。
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=3):
+        msg = msg.strip(" ")
+        msg = msg.strip("\t")
         if self.numerator != '' and self.fraction != '':
-            msg = '[' + self.numerator + '/' + self.fraction + ']' + msg
+            msg = '[' + self.numerator + '/' + self.fraction + '] ' + msg
         if msg.find('\n') != -1:
             msg = '\n' + msg + '\n'
         self.origin_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
