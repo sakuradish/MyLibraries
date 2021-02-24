@@ -69,13 +69,13 @@ class MyDataBase():
     ## @brief データフレームをxlsxから読み込み
     @MyLogger.deco
     def DBRead(self):
-        self.df = pd.read_excel(self.datapath, engine='openpyxl', dtype='category')
+        self.df = pd.read_excel(self.datapath, engine='openpyxl', dtype='object')
         self.OnDataFrameUpdate()
 # ===================================================================================
     ## @brief データフレームを辞書データから読み込み
     @MyLogger.deco
     def DBImportDict(self, arg_dict):
-        self.df = pd.DataFrame.from_dict(arg_dict, orient='index', dtype="category")
+        self.df = pd.DataFrame.from_dict(arg_dict, orient='index', dtype="object")
         self.OnDataFrameUpdate()
 # ===================================================================================
     ## @brief データフレームをxlsxに書き込み
@@ -137,6 +137,7 @@ class MyDataBase():
             else:
                 MyLogger.warning('column ', column, ' is already exist')
         self.OnDataFrameUpdate()
+        self.DBWrite()
 # ===================================================================================
     ## @brief 指定列だけ取り出し
     @MyLogger.deco

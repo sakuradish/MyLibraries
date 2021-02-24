@@ -60,9 +60,6 @@ class TaskFrame(tk.Frame):
         for column,widget in self.filterfield['combobox']['widgets'].items():
             self.taskdata.DBFilter(column, widget['instance'].GetText())
         rows = self.taskdata.GetRows()
-        MyLogger.critical(self.taskdata.df)
-        MyLogger.critical(self.taskdata.df.index)
-        MyLogger.critical(list(self.taskdata.df.index))
         self.viewerfield['data/project'] = WidgetFactory.NewLabel(self, rows, 0,0.35,0.2,0.65, "ToBottom")
         self.viewerfield['data/task'] = WidgetFactory.NewLabel(self, rows, 0.2,0.35,0.4,0.65, "ToBottom")
         self.viewerfield['data/status'] = WidgetFactory.NewCombobox(self, rows, 0.6,0.35,0.2,0.65, "ToBottom")
@@ -93,17 +90,12 @@ class TaskFrame(tk.Frame):
             widget['instance'].SetValues(values)
         # viewerfield
         self.taskdata.DBRead()
-        for row,widget in self.viewerfield['data/project']['widgets'].items():
-            values = self.taskdata.GetListByColumn(columns[0])
-            widget['instance'].SetText(values[row])
-        for row,widget in self.viewerfield['data/task']['widgets'].items():
-            values = self.taskdata.GetListByColumn(columns[1])
-            widget['instance'].SetText(values[row])
+        for column in columns:
+            values = self.taskdata.GetListByColumn(columns)
+            for row,widget in self.viewerfield[column]['widgets'].items():
+                widget['instance'].SetText(values[row])
+        self.taskdata.DBDropDuplicates(columns[2])
         for row,widget in self.viewerfield['data/status']['widgets'].items():
-            values = self.taskdata.GetListByColumn(columns[2])
-            widget['instance'].SetText(values[row])
-        for row,widget in self.viewerfield['data/status']['widgets'].items():
-            self.taskdata.DBDropDuplicates(columns[2])
             widget['instance'].SetValues(self.taskdata.GetListByColumn(columns[2]))
         # memofield
         for row,widget in self.memofield['combobox']['widgets'].items():
