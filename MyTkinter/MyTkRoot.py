@@ -92,7 +92,7 @@ class MyTkRoot(tk.Tk):
     def OnKeyEvent(self, event):
         MyLogger.info(event)
         # Ctrl+数字ならフレームの表示をトグル
-        if event.keysym.isdecimal() and len(self.idtable) >= int(event.keysym)-1:
+        if event.keysym.isdecimal() and len(self.idtable) > int(event.keysym)-1:
             self.__ToggleFrameVisibility(self.idtable[int(event.keysym)-1])
         # 登録されているコールバックを呼び出す
         if self.isKeyEventProcessing == False:
