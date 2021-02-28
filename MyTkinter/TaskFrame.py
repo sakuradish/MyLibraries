@@ -91,7 +91,7 @@ class TaskFrame(tk.Frame):
         # viewerfield
         self.taskdata.DBRead()
         for column in columns:
-            values = self.taskdata.GetListByColumn(columns)
+            values = self.taskdata.GetListByColumn(column)
             for row,widget in self.viewerfield[column]['widgets'].items():
                 widget['instance'].SetText(values[row])
         self.taskdata.DBDropDuplicates(columns[2])

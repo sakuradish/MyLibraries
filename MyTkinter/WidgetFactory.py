@@ -17,9 +17,9 @@ class WidgetFactory():
     ## @brief 初期化処理
     def __init__(self):
         self.widgets = {}
-        self.label_font = ("MSゴシック", "14", "bold")
-        self.combobox_font = ("MSゴシック", "14", "bold")
-        self.text_font = ("MSゴシック", "14", "bold")
+        self.label_font = ("MSゴシック", "20", "bold")
+        self.combobox_font = ("MSゴシック", "20", "bold")
+        self.text_font = ("MSゴシック", "20", "bold")
 # ===================================================================================
     ## @brief インスタンス取得
     @classmethod

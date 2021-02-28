@@ -22,6 +22,15 @@ class MyTkRoot(tk.Tk):
         self.isMouseEventProcessing = False
         self.bind("<Control-Key>", self.OnKeyEvent)
         self.bind("<Button>", self.OnMouseEvent)
+        self.__DrawCanvas()
+# ===================================================================================
+    ## @brief 背面のCanvasを描画
+    @MyLogger.deco
+    def __DrawCanvas(self):
+        import pyautogui
+        width,height = pyautogui.size()
+        self.canvas = tk.Canvas(self, bg="lightblue", width=width, height=height)
+        self.canvas.place(relx=0, rely=0.1, relheight=0.9, relwidth=1)
 # ===================================================================================
     ## @brief フレームを登録
     @MyLogger.deco
@@ -31,7 +40,7 @@ class MyTkRoot(tk.Tk):
         button = tk.Button(self, text=id)
         button.bind("<Button-1>", self.__OnToggleButtonPressed)
         button.bind("<Return>", self.__OnToggleButtonPressed)
-        button.place(relwidth=0.1, relx=length*0.1)
+        button.place(relx=length*0.1, rely=0, relheight=0.1, relwidth=0.1)
         # フレーム登録
         self.idtable[length] = id
         if length == 0:
@@ -61,13 +70,14 @@ class MyTkRoot(tk.Tk):
         rowmax = math.ceil(len(visibleFrames) / num)
         colmax = num
         # Frameを配置
-        relwidth = 1 / colmax
-        relheight = 0.9 / rowmax
+        padding = 0.02
+        relwidth = (1-(padding*colmax)) / colmax
+        relheight = (0.9-(padding*rowmax)) / rowmax
         for row in range(rowmax):
             for col in range(colmax):
                 index = row*colmax+col
-                relx = col*relwidth
-                rely = 0.1+row*relheight
+                relx = (col*relwidth)+(padding*col)+(padding/2)
+                rely = (0.1+row*relheight)+(padding*row)+(padding/2)
                 if len(visibleFrames) > index:
                     visibleFrames[index].place(relx=relx,rely=rely,relwidth=relwidth,relheight=relheight)
 # ===================================================================================
@@ -113,6 +123,24 @@ class MyTkRoot(tk.Tk):
                 if frame['OnMouseEvent']:
                     frame['OnMouseEvent'](event)
             self.isMouseEventProcessing = False
+# ===================================================================================
+    ## @brief 背景画像設定
+    @MyLogger.deco
+    def SetImage(self, path=""):
+        import os
+        if not os.path.exists(path):
+            from PIL import Image
+            import pyautogui
+            self.img = Image.open(path)
+            self.img = self.img.resize(pyautogui.size())
+        else:
+            import pyautogui
+            self.img = pyautogui.screenshot()
+            self.img.mode = 'RGBA'
+        from PIL import ImageTk
+        self.img = ImageTk.PhotoImage(self.img)
+        self.canvas.create_image(0, 0, image=self.img, anchor=tk.NW)
+        self.__DrawFrames()
 # ===================================================================================
 if __name__ == '__main__':
     root = MyTkRoot()
