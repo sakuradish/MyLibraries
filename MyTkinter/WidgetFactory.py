@@ -17,6 +17,9 @@ class WidgetFactory():
     ## @brief 初期化処理
     def __init__(self):
         self.widgets = {}
+        self.label_font = ("MSゴシック", "14", "bold")
+        self.combobox_font = ("MSゴシック", "14", "bold")
+        self.text_font = ("MSゴシック", "14", "bold")
 # ===================================================================================
     ## @brief インスタンス取得
     @classmethod
@@ -77,7 +80,8 @@ class WidgetFactory():
             index = name_list.index(name)
             # widget生成と配置
             v = tk.StringVar()
-            instance = cls.Combobox(parent, textvariable=v)
+            font = cls.GetInstance().combobox_font
+            instance = cls.Combobox(parent, textvariable=v, font=font)
             instance.SetText(name)
             coordates = cls.CalcLayout(length, index, x, y, w, h, direction=direction)
             instance.place(relx=coordates['relx'], rely=coordates['rely'], relwidth=coordates['relw'], relheight=coordates['relh'])
@@ -98,7 +102,8 @@ class WidgetFactory():
         for name in name_list:
             index = name_list.index(name)
             # widget生成と配置
-            instance = cls.Label(parent, text=name)
+            font = cls.GetInstance().label_font
+            instance = cls.Label(parent, text=name, font=font)
             # instance.SetText(name)
             coordates = cls.CalcLayout(length, index, x, y, w, h, direction=direction)
             instance.place(relx=coordates['relx'], rely=coordates['rely'], relwidth=coordates['relw'], relheight=coordates['relh'])
@@ -139,8 +144,8 @@ class WidgetFactory():
         for name in name_list:
             index = name_list.index(name)
             # widget生成と配置
-            my_font = font.Font(parent,family=u'ＭＳ ゴシック',size=10)
-            instance = cls.Text(parent,wrap=tk.CHAR,undo=True, bg='black',font=my_font, foreground='white', insertbackground='white')
+            font = cls.GetInstance().text_font
+            instance = cls.Text(parent,wrap=tk.CHAR,undo=True, bg='black',font=font, foreground='white', insertbackground='white')
             x_sb = tk.Scrollbar(parent,orient='horizontal')
             y_sb = tk.Scrollbar(parent,orient='vertical')
             x_sb.config(command=instance.xview)
