@@ -126,6 +126,7 @@ class MyLogger:
                 self.critical(type(e))
                 self.critical(e)
                 self.critical(traceback.format_exc())
+                input("press any key to exit ...")
                 sys.exit()
         return decowrapper
 # ===================================================================================
@@ -149,6 +150,7 @@ class MyLogger:
                 self.critical(type(e))
                 self.critical(e)
                 self.critical(traceback.format_exc())
+                input("press any key to exit ...")
                 sys.exit()
         return decowrapper
 # ===================================================================================
@@ -193,6 +195,19 @@ class MyLogger:
         del stack['start']
         self.debug(stack)
         self.stacklevel -= 1
+# ===================================================================================
+    ## @brief timeout判定
+    def isTimeOut(self, timeout):
+        if not self.stacklevel in self.stack:
+            return False
+        start = self.stack[self.stacklevel]['start']
+        elapsedTime = round(time.time() - start, 2)
+        if timeout < elapsedTime:
+            self.warning(elapsedTime,"/",timeout,"elapsed")
+            return True
+        else:
+            self.info(elapsedTime,"/",timeout,"elapsed")
+            return False
 # ===================================================================================
     ## @brief sakuraレベルログ
     def sakura(self, *args, **kwargs):
