@@ -3,6 +3,7 @@ import sys
 sys.path.append("../MyLogger/")
 from MyLogger import MyLogger
 MyLogger = MyLogger.GetInstance()
+from WidgetFactory import WidgetFactory
 # ===================================================================================
 import tkinter as tk
 import math
@@ -104,6 +105,8 @@ class MyTkRoot(tk.Tk):
         # Ctrl+数字ならフレームの表示をトグル
         if event.keysym.isdecimal() and len(self.idtable) > int(event.keysym)-1:
             self.__ToggleFrameVisibility(self.idtable[int(event.keysym)-1])
+        # Widgetにキーボードイベントを送る
+        WidgetFactory.OnKeyEvent(event)
         # 登録されているコールバックを呼び出す
         if self.isKeyEventProcessing == False:
             self.isKeyEventProcessing = True
