@@ -12,50 +12,33 @@ from tkinter import font
 from tkinterhtml import HtmlFrame
 # ===================================================================================
 ## @brief Widget生成クラス
+# @note
+# ちょっとファイル分割考えたいけど、再帰的にimportしないように注意する必要がある。
 class WidgetFactory():
     widgets = {}
     font = ("MSゴシック", "20", "bold")
-    # ## @brief 初期化処理
-    # def __init__(self):
-    #     self.widgets = {}
-    #     self.font = ("MSゴシック", "20", "bold")
-# ===================================================================================
-    # ## @brief インスタンス取得
-    # @classmethod
-    # def GetInstance(cls):
-    #     if not hasattr(cls, "this_"):
-    #         cls.this_ = cls()
-    #     return cls.this_
 # ===================================================================================
     ## @brief ID指定でWidgetsを削除
     @classmethod
     def Destroy(cls, id):
-        for key,widget in cls.widgets[id].items():
-            widget['instance'].destroy()
+        if id in cls.widgets:
+            return cls.widgets[id].Destroy()
         del cls.widgets[id]
 # ===================================================================================
     ## @brief ID指定でFocusが当たっているか確認
     @classmethod
     def HasFocus(cls, id, focused):
-        MyLogger.sakura(cls.widgets)
-        MyLogger.sakura(cls.widgets[id])
         if id in cls.widgets:
             return cls.widgets[id].HasFocus(focused)
-        # for key,widget in cls.widgets[id].items():
-        #     if widget['instance'].HasFocus(focused):
-        #         MyLogger.critical(key)
-        #         return key
         return None
 # ===================================================================================
     ## @brief キーボードイベント
-    # @note
-    # 各部品のOnKeyEventをコール
     @classmethod
-    def OnKeyEvent(cls, event):
-        for id,widgets in cls.widgets.items():
-            # MyLogger.sakura(id)
-            # MyLogger.sakura(widgets)
-            pass
+    def OnKeyEvent(cls, event, focused):
+        # focusされている部品だけにキーボードイベント配信
+        for id,widget in cls.widgets.items():
+            if cls.HasFocus(id, focused):
+                widget.OnKeyEvent(event)
         # fontサイズを変更(別途部品の描画更新の検討が必要)
         if event.keysym == 'plus':
             cls.font = (cls.font[0], str(int(cls.font[1])+1), cls.font[2])
@@ -107,32 +90,67 @@ class WidgetFactory():
         def __init__(self, cls, parent, database, x, y, w, h, direction="ToBottom"):
             self.labels = {}
             self.comboboxes = {}
-            columns = database.GetColumns()
+            self.database = database
+            self.database.AddCallbackOnWrite(self.ClearText)
+            self.database.AddCallbackOnWrite(self.UpdateValues)
+            self.cls = cls
+            self.parent = parent
+            self.x = x
+            self.y = y
+            self.w = w
+            self.h = h
+            self.direction = direction
+            self.Initialize()
+        def Initialize(self):
+            self.Destroy()
+            columns = self.database.GetColumns()
             for column in columns:
                 length = len(columns)
                 index = columns.index(column)
-                # widget生成と配置
-                font = cls.font
-                instance = cls.Label(parent, text=column, font=font)
-                coordates = cls.CalcLayout1D(length, index, x, y, w/2, h, direction=direction)
+                # label
+                font = self.cls.font
+                instance = self.cls.Label(self.parent, text=column, font=font)
+                coordates = self.cls.CalcLayout1D(length, index, self.x, self.y, self.w/2, self.h, direction=self.direction)
                 instance.place(relx=coordates['relx'], rely=coordates['rely'], relwidth=coordates['relw'], relheight=coordates['relh'])
                 self.labels[column] = {'instance':instance}
-                # widget生成と配置
+                # combobox
                 v = tk.StringVar()
-                font = cls.font
-                instance = cls.Combobox(parent, textvariable=v, font=font)
-                instance.SetText("")
-                database.DBRead()
-                database.DBDropDuplicates(column)
-                values = database.GetListByColumn(column)
-                instance.SetValues(values)
-                coordates = cls.CalcLayout1D(length, index, x+w/2, y, w/2, h, direction=direction)
+                font = self.cls.font
+                instance = self.cls.Combobox(self.parent, textvariable=v, font=font)
+                coordates = self.cls.CalcLayout1D(length, index, self.x+self.w/2, self.y, self.w/2, self.h, direction=self.direction)
                 instance.place(relx=coordates['relx'], rely=coordates['rely'], relwidth=coordates['relw'], relheight=coordates['relh'])
                 self.comboboxes[column] = {'instance':instance, 'stringvar':v}
+            self.ClearText()
+            self.UpdateValues()
+        def ClearText(self):
+            for column,widget in self.comboboxes.items():
+                widget['instance'].SetText("")
+        def UpdateValues(self):
+            for column,widget in self.comboboxes.items():
+                self.database.DBRead()
+                self.database.DBDropDuplicates(column)
+                values = self.database.GetListByColumn(column)
+                widget['instance'].SetValues(values)
         def Destroy(self):
-            pass
-        def OnKeyEvent(self):
-            pass
+            for column,widget in self.comboboxes.items():
+                widget['instance'].destroy()
+            for column,widget in self.labels.items():
+                widget['instance'].destroy()
+        def OnKeyEvent(self, event):
+            if event.keysym == 'Return':
+                data = []
+                for column,widget in self.comboboxes.items():
+                    data.append(widget['instance'].GetText())
+                self.database.DBRead()
+                self.database.DBAppendRow(data)
+                self.database.DBWrite()
+                for column,widget in self.comboboxes.items():
+                    widget['instance'].SetText("")
+        def HasFocus(self, focused):
+            for column,widget in self.comboboxes.items():
+                if widget['instance'] == focused:
+                    return column
+            return None
 # ===================================================================================
     ## @brief FilterFieldクラス
     @classmethod
@@ -145,26 +163,50 @@ class WidgetFactory():
     class FilterField():
         def __init__(self, cls, parent, database, x, y, w, h, direction="ToBottom"):
             self.comboboxes = {}
-            columns = database.GetColumns()
+            self.cls = cls
+            self.parent = parent
+            self.database = database
+            self.database.AddCallbackOnWrite(self.UpdateValues)
+            self.x = x
+            self.y = y
+            self.w = w
+            self.h = h
+            self.direction = direction
+            self.Initialize()
+        def Initialize(self):
+            columns = self.database.GetColumns()
             for column in columns:
                 length = len(columns)
                 index = columns.index(column)
-                # widget生成と配置
+                # combobox
                 v = tk.StringVar()
-                font = cls.font
-                instance = cls.Combobox(parent, textvariable=v, font=font)
-                instance.SetText("")
-                database.DBRead()
-                database.DBDropDuplicates(column)
-                values = database.GetListByColumn(column)
-                instance.SetValues(values)
-                coordates = cls.CalcLayout1D(length, index, x, y, w, h, direction=direction)
+                font = self.cls.font
+                instance = self.cls.Combobox(self.parent, textvariable=v, font=font)
+                coordates = self.cls.CalcLayout1D(length, index, self.x, self.y, self.w, self.h, direction=self.direction)
                 instance.place(relx=coordates['relx'], rely=coordates['rely'], relwidth=coordates['relw'], relheight=coordates['relh'])
                 self.comboboxes[column] = {'instance':instance, 'stringvar':v}
+        def ClearText(self):
+            for column,widget in self.comboboxes.items():
+                widget['instance'].SetText("")
+        def UpdateValues(self):
+            for column,widget in self.comboboxes.items():
+                self.database.DBRead()
+                self.database.DBDropDuplicates(column)
+                values = self.database.GetListByColumn(column)
+                widget['instance'].SetValues(values)
         def Destroy(self):
-            pass
-        def OnKeyEvent(self):
-            pass
+            for column,widget in self.comboboxes.items():
+                widget['instance'].destroy()
+        def OnKeyEvent(self, event):
+            if event.keysym == 'Return':
+                # 追加した結果でviewfieldとか更新したい
+                # self.ClearText()
+                self.UpdateValues()
+        def HasFocus(self, focused):
+            for column,widget in self.comboboxes.items():
+                if widget['instance'] == focused:
+                    return column
+            return None
 # ===================================================================================
     ## @brief ViewerFieldクラス
     @classmethod
@@ -180,12 +222,22 @@ class WidgetFactory():
         def __init__(self, cls, parent, database, x, y, w, h):
             self.uniquecolumns = []
             self.comboboxes = {}
-            columns = database.GetColumns()
-            rows = database.GetRows()
+            self.cls = cls
+            self.parent = parent
+            self.database = database
+            self.x = x
+            self.y = y
+            self.w = w
+            self.h = h
+            self.database.AddCallbackOnWrite(self.Initialize)
+            self.Initialize()
+        def Initialize(self):
+            columns = self.database.GetColumns()
+            rows = self.database.GetRows()
             for column in columns:
                 column_length = len(columns)
                 column_index = columns.index(column)
-                # filterしたrowが欲しい
+                # TODO:filterfieldでfilterしたrowが欲しい
                 # self.taskdata.DBRead()
                 # self.taskdata.DBDropDuplicates('data/task')
                 # for column,widget in self.filterfield['combobox']['widgets'].items():
@@ -194,31 +246,52 @@ class WidgetFactory():
                 for row in rows:
                     row_length = len(rows)
                     row_index = rows.index(row)
-                    # widget生成と配置
+                    # combobox
                     v = tk.StringVar()
-                    font = cls.font
-                    instance = cls.Combobox(parent, textvariable=v, font=font)
-                    # instance.SetText("")
-                    instance.SetText(column + str(row))
-                    database.DBRead()
-                    database.DBDropDuplicates(column)
-                    values = database.GetListByColumn(column)
-                    instance.SetValues(values)
-                    coordates = cls.CalcLayout2D(column_length, column_index, row_length, row_index, x, y, w, h)
+                    font = self.cls.font
+                    instance = self.cls.Combobox(self.parent, textvariable=v, font=font)
+                    coordates = self.cls.CalcLayout2D(column_length, column_index, row_length, row_index, self.x, self.y, self.w, self.h)
                     instance.place(relx=coordates['relx'], rely=coordates['rely'], relwidth=coordates['relw'], relheight=coordates['relh'])
                     if not row in self.comboboxes:
                         self.comboboxes[row] = {}
                     if not column in self.comboboxes[row]:
                         self.comboboxes[row][column] = {}
                     self.comboboxes[row][column] = {'instance':instance, 'stringvar':v}
+            self.UpdateText()
+            self.UpdateValues()
+        def UpdateText(self):
+            for row, coldict in self.comboboxes.items():
+                for column, widget in coldict.items():
+                    self.database.DBRead()
+                    datadict = self.database.GetDict()
+                    widget['instance'].SetText(datadict[row][column])
+        def UpdateValues(self):
+            for row, coldict in self.comboboxes.items():
+                for column, widget in coldict.items():
+                    self.database.DBRead()
+                    self.database.DBDropDuplicates(column)
+                    values = self.database.GetListByColumn(column)
+                    widget['instance'].SetValues(values)
+        def Destroy(self):
+            for row, coldict in self.comboboxes.items():
+                for column, widget in coldict.items():
+                    widget['instance'].destroy()
+        def OnKeyEvent(self, event):
+            if event.keysym == 'Return':
+                # 追加した結果でviewfieldとか更新したい
+                # self.ClearText()
+                self.UpdateValues()
+        def HasFocus(self, focused):
+            for row, coldict in self.comboboxes.items():
+                for column, widget in coldict.items():
+                    if widget['instance'] == focused:
+                        return row
+            return None
         def SetUniqueColumn(column):
             self.uniquecolumns.append(column)
+            # 列に同名データがあったら最後だけ表示したい
             # self.taskdata.DBDropDuplicates('data/task')
         def LinkFilterField(field):
-            pass
-        def Destroy(self):
-            pass
-        def OnKeyEvent(self):
             pass
 # ===================================================================================
     ## @brief MultiComboboxクラス

@@ -61,19 +61,7 @@ class TaskFrame(tk.Frame):
     @MyLogger.deco
     def OnKeyEvent(self, event):
         if event.keysym == 'Return':
-            # if WidgetFactory.HasFocus(self.inputfield['combobox']['id'] , self.master.focus_get()):
-            #     data = []
-            #     for column,widget in self.inputfield['combobox']['widgets'].items():
-            #         data.append(widget['instance'].GetText())
-            #     self.taskdata.DBRead()
-            #     self.taskdata.DBAppendRow(data)
-            #     self.taskdata.DBWrite()
-            #     # 入力欄空にしたい
-            #     # InitializeStaticWidget呼ぶとfilterも空になっちゃうので仮実装
-            #     for column,widget in self.inputfield['combobox']['widgets'].items():
-            #         widget['instance'].SetText('')
-            #     self.InitializeDynamicWidget()
-            #     self.Draw()
+            
             # if WidgetFactory.HasFocus(self.filterfield['combobox']['id'] , self.master.focus_get()):
             #     self.InitializeDynamicWidget()
             #     self.Draw()

@@ -114,9 +114,11 @@ class MyLogger:
         funcname = funcname[:funcname.find('('):]
         def decowrapper(*args,**kwargs):
             try:
+                pwd = os.getcwd()
                 self.start(filename, funcname)
                 ret = func(*args,**kwargs)
                 self.finish()
+                os.chdir(pwd)
                 return ret
             except Exception as e:
                 for i in range(1,self.stacklevel+1,1):
@@ -138,9 +140,11 @@ class MyLogger:
         funcname = funcname[:funcname.find('('):]
         def decowrapper(*args,**kwargs):
             try:
+                pwd = os.getcwd()
                 self.start(filename, funcname)
                 ret = profile(func)(*args,**kwargs)
                 self.finish()
+                os.chdir(pwd)
                 return ret
             except Exception as e:
                 for i in range(1,self.stacklevel+1,1):
