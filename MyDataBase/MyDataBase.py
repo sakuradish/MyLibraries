@@ -78,7 +78,7 @@ class MyDataBase():
     @MyLogger.deco
     def DBImportDict(self, arg_dict):
         self.df = pd.DataFrame.from_dict(arg_dict, orient='index', dtype="object")
-        self.OnDataFrameUpdate()
+        self.DBWrite()
 # ===================================================================================
     ## @brief データフレームをxlsxに書き込み
     @MyLogger.deco

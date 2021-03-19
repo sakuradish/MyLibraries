@@ -2,11 +2,13 @@
 import sys
 sys.path.append("../MyLogger/")
 sys.path.append("../MyDataBase/")
+sys.path.append('../MyBaseSystem/')
 from MyLogger import MyLogger
 MyLogger = MyLogger.GetInstance()
 from MyDataBase import MyDataBase
 from MyTkRoot import MyTkRoot
 from WidgetFactory import WidgetFactory
+from MyBaseSystem import *
 # ===================================================================================
 import tkinter as tk
 import glob
@@ -16,82 +18,132 @@ class ExplorerFrame(tk.Frame):
     @MyLogger.deco
     def __init__(self,master, cnf={},**kw):
         super().__init__(master,cnf,**kw)
-        # self.explorerdata = MyDataBase("../data/explorer.txt", ['base', 'path', 'update', 'size'])
-        self.InitializeStaticWidget()
-        self.PlaceStaticWidget()
-        self.UpdateStaticWidgetProperty()
+        self.explorerdata = MyDataBase("explorer.xlsx")
+        self.explorerdata.DBAppendColumn(['abspath', 'dirname', 'basename', 'extension', 'contents'])
+        self.combobox = {}
+        if 'id' in self.combobox:
+            WidgetFactory.Destroy(self.combobox['id'])
+        self.combobox = WidgetFactory.NewMultiCombobox(self, ['combobox'], 0,0,1,0.1, "ToBottom")
 # ===================================================================================
+    # @note
+    # 今は隠しファイルヒットしないかも
     @MyLogger.deco
-    def InitializeStaticWidget(self):
-        # text
-        self.text = WidgetFactory.NewText(self, ['text'], 0,0.1,1,0.9, "ToRight")
-        # self.text['widgets']['text']['instance'].SetText(self.explorerdata)
-# ===================================================================================
-    @MyLogger.deco
-    def PlaceStaticWidget(self):
-        pass
-# ===================================================================================
-    @MyLogger.deco
-    def UpdateStaticWidgetProperty(self, event=None):
-        pass
-        # # text
-        # self.text.configure(state='normal')
-        # self.text.configure(undo=False)
-        # self.text.delete('1.0','end')
-        # for record in self.explorerdata.GetAllRecords(filter={'path':self.cb2.get()}):
-        #     self.text.insert('end', self.explorerdata.ConvertRecordToString(record) + "\n")
-        # self.text.see('end')
-        # self.text.configure(state='disabled')
-        # # combobox1
-        # records = self.explorerdata.GetAllRecordsByColumn('base')
-        # records = [record['data']['base'] for record in records]
-        # records = list(dict.fromkeys(records))
-        # self.cb1.configure(values=records)
-        # # combobox2
-        # records = self.explorerdata.GetAllRecordsByColumn('base')
-        # records = [record['data']['base'] for record in records]
-        # records = list(dict.fromkeys(records))
-        # self.cb2.configure(values=records)
-# ===================================================================================
-    @MyLogger.deco
-    def __Glob(self, path):
-        if os.path.exists(path) and os.path.isdir(path):
-            os.system("start " + path)
-            basedirs = [path]
-            donecnt = 0
-            remaincnt = len(basedirs)
-            while 1:
-                if not basedirs:
-                    break
-                basedir = basedirs.pop(0)
-                progress = "[" + str(donecnt) + "/" + str(remaincnt) + "]"
+    def __Glob(self, basedir):
+        # ===================================================================================
+        def __xlsx2txt(path):
+            ret = ""
+            try:
+                import openpyxl
+                wb = openpyxl.load_workbook(path)
+                for ws in wb:
+                    for row in ws:
+                        for cell in row:
+                            if cell.value == None:
+                                ret += "\t"
+                            else:
+                                ret += str(cell.value) + "\t"
+                        ret += "\n"
+            except Exception as e:
+                MyLogger.error(e)
+            return ret
+        # ===================================================================================
+        def __docx2txt(path):
+            ret = ""
+            try:
+                import docx
+                doc= docx.Document(path)
+                for par in doc.paragraphs:
+                    ret += par.text + "\n"
+            except Exception as e:
+                MyLogger.error(e)
+                ret = "[could not read contents]" + str(e)
+            return ret
+        # ===================================================================================
+        def __pptx2txt(path):
+            ret = ""
+            try:
+                import pptx
+                prs = pptx.Presentation(path)
+                for i, sld in enumerate(prs.slides, start=1):
+                    for shp in sld.shapes:
+                        if shp.has_text_frame:
+                            print(shp.text)
+                            ret += shp.text + "\n"
+            except Exception as e:
+                MyLogger.error(e)
+                ret = "[could not read contents]" + str(e)
+            return ret
+        # ===================================================================================
+        def __pdf2txt(path):
+            ret = ""
+            try:
+                from pdfminer.high_level import extract_text
+                ret = extract_text(path)
+            except Exception as e:
+                MyLogger.error(e)
+                ret = "[could not read contents]" + str(e)
+            return ret
+        # ===================================================================================
+        def __other2txt(path):
+            ret = ""
+            try:
+                ret = "".join(myopen(path, 'r').readlines())
+            except Exception as e:
+                MyLogger.error(e)
+                ret = "[could not read contents]" + str(e)
+            return ret
+        # ===================================================================================
+        def __smallglob(basedir):
+            files = []
+            dirs = [basedir]
+            while dirs:
+                MyLogger.sakura("remaining dirs",len(dirs))
+                basedir = dirs.pop(0)
                 try:
-                    files = [file for file in glob.glob(basedir + "/*", recursive=False) if os.path.isfile(file)]
-                    dirs = [dir for dir in glob.glob(basedir + "/*", recursive=False) if os.path.isdir(dir)]
-                    basedirs += dirs
-                    for file in files:
-                        print(progress + file)
-                        update = datetime.datetime.fromtimestamp(os.stat(file).st_mtime)
-                        update = update.strftime('%Y/%m/%d')
-                        size = str(os.stat(file).st_size)
-                        self.explorerdata.InsertRecordWithLogInfo([self.cb1.get(), file, update, size])
-                except:
-                    update = datetime.datetime.fromtimestamp(os.stat(basedir).st_mtime)
-                    update = update.strftime('%Y/%m/%d')
-                    size = str(os.stat(basedir).st_size)
-                    self.explorerdata.InsertRecordWithLogInfo([self.cb1.get(), basedir, update, size])
-                    print(basedir+" can not glob for some error")
-                donecnt += 1
-                remaincnt += len(basedirs)
+                    files += [file for file in glob.glob(basedir + "/*", recursive=False) if os.path.isfile(file)]
+                    dirs += [file for file in glob.glob(basedir + "/*", recursive=False) if os.path.isdir(file)]
+                except Exception as e:
+                    MyLogger.error("[glob failed at",basedir,"]",e)
+            return files
+        # path整理
+        basedir = basedir.replace("\"", "")
+        basedir = basedir.replace("/", os.sep)
+        basedir = basedir.replace("\\", os.sep)
+        MyLogger.sakura(basedir)
+        if not os.path.exists(basedir) or not os.path.isdir(basedir):
+            return
+        # files = [file for file in glob.glob(basedir + "/**/*", recursive=True) if os.path.isfile(file)]
+        files = __smallglob(basedir)
+        self.explorerdata.DBRead()
+        temp_dict = self.explorerdata.GetDict()
+        MyLogger.SetFraction(len(files))
+        for file in files:
+            MyLogger.SetNumerator(files.index(file))
+            MyLogger.sakura(file)
+            abspath = os.path.abspath(file)
+            dirname = os.path.dirname(file)
+            basename = os.path.basename(file)
+            extension = os.path.splitext(file)[1]
+            contents = ""
+            if extension == ".xlsx":
+                contents = __xlsx2txt(abspath)
+            elif extension == ".docx":
+                contents = __docx2txt(abspath)
+            elif extension == ".pptx":
+                contents = __pptx2txt(abspath)
+            elif extension == ".pdf":
+                contents = __pdf2txt(abspath)
+            else:
+                contents = __other2txt(abspath)
+            temp_dict = self.explorerdata.DBAppendRow([abspath, dirname, basename, extension, contents], temp_dict)
+        self.explorerdata.DBImportDict(temp_dict)
 # ===================================================================================
     @MyLogger.deco
     def OnKeyEvent(self, event):
         if event.keysym == 'Return':
-            if self.cb1 == self.master.focus_get() and self.cb1.get() != "":
-                self.__Glob(self.cb1.get())
-                self.UpdateStaticWidgetProperty()
-            elif self.cb2 == self.master.focus_get():
-                self.UpdateStaticWidgetProperty()
+            if (focused := WidgetFactory.HasFocus(self.combobox['id'] , self.master.focus_get())):
+                path = self.combobox['instance'].comboboxes[focused]['instance'].GetText()
+                self.__Glob(path)
 # ===================================================================================
 if __name__ == '__main__':
     root = MyTkRoot()

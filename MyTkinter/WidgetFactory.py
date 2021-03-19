@@ -318,7 +318,7 @@ class WidgetFactory():
                 self.comboboxes[name] = {'instance':instance, 'stringvar':v}
         def Destroy(self):
             pass
-        def OnKeyEvent(self):
+        def OnKeyEvent(self, event):
             pass
         def HasFocus(self, focused):
             for key,widget in self.comboboxes.items():

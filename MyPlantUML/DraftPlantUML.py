@@ -61,7 +61,6 @@ class MyPlantUML():
          self.__ParseFunctions(file)
          # self.__ParseDefines(file)
       self.db_functions.DBImportDict(self.temp_dict)
-      self.db_functions.DBWrite()
       self.__LoadFunctionList()
 #============================================================================================================================================================
    @MyLogger.deco
