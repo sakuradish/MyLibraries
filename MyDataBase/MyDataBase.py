@@ -46,7 +46,8 @@ class MyDataBase():
         if not os.path.exists(os.path.dirname(self.datapath)):
             os.makedirs(os.path.dirname(self.datapath))
         if not os.path.exists(self.datapath):
-            pd.DataFrame(columns=['timestamp/date', 'timestamp/time']).to_excel(self.datapath, index=False)
+            # pd.DataFrame(columns=['timestamp/date', 'timestamp/time']).to_excel(self.datapath, index=False)
+            pd.DataFrame(columns=['timestamp/date', 'timestamp/time']).to_csv(self.datapath, index=False)
             # pd.DataFrame().to_excel(self.datapath, index=False)
             MyLogger.info(self.datapath, ' is initialized')
         # DataFrame読み込み
@@ -71,7 +72,8 @@ class MyDataBase():
     ## @brief データフレームをxlsxから読み込み
     @MyLogger.deco
     def DBRead(self):
-        self.df = pd.read_excel(self.datapath, engine='openpyxl', dtype='object')
+        # self.df = pd.read_excel(self.datapath, engine='openpyxl', dtype='object')
+        self.df = pd.read_csv(self.datapath, dtype='object')
         self.OnDataFrameUpdate()
 # ===================================================================================
     ## @brief データフレームを辞書データから読み込み
@@ -83,7 +85,8 @@ class MyDataBase():
     ## @brief データフレームをxlsxに書き込み
     @MyLogger.deco
     def DBWrite(self):
-        self.df.to_excel(self.datapath, index=False)
+        # self.df.to_excel(self.datapath, index=False)
+        self.df.to_csv(self.datapath, index=False)
         self.OnWrite()
 # ===================================================================================
     ## @brief データフレームから指定列の重複を削除

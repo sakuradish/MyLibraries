@@ -4,6 +4,7 @@ sys.path.append("../MyLogger/")
 sys.path.append("../MyDataBase/")
 sys.path.append('../MyBaseSystem/')
 from MyLogger import MyLogger
+# MyLogger = MyLogger.GetInstance("SUCCESS")
 MyLogger = MyLogger.GetInstance()
 from MyDataBase import MyDataBase
 from MyTkRoot import MyTkRoot
@@ -18,13 +19,27 @@ class ExplorerFrame(tk.Frame):
     @MyLogger.deco
     def __init__(self,master, cnf={},**kw):
         super().__init__(master,cnf,**kw)
-        self.explorerdata = MyDataBase("explorer.xlsx")
+        self.explorerdata = MyDataBase("explorer.csv")
         self.explorerdata.DBAppendColumn(['abspath', 'dirname', 'basename', 'extension', 'contents'])
         self.combobox = {}
         if 'id' in self.combobox:
             WidgetFactory.Destroy(self.combobox['id'])
-        self.combobox = WidgetFactory.NewMultiCombobox(self, ['combobox'], 0,0,1,0.1, "ToBottom")
+        self.combobox = WidgetFactory.NewMultiCombobox(self, ['combobox'], 0,0,1,1, "ToBottom")
 # ===================================================================================
+    def test(self):
+        self.explorerdata.DBRead()
+        temp_dict = self.explorerdata.GetDict()
+        MyLogger.SetFraction(2000000)
+        for i in range(2000000):
+            MyLogger.SetNumerator(i)
+            abspath = "os.path.abspath(file)"
+            dirname = "os.path.dirname(file)"
+            basename = "os.pat,h.ba,sename(file)"
+            # extension = "os.path.splitext(file)[1]"
+            extension = "os.path.spl,i,text(file)[1]\nos.path.splitext(file)[1]\nos.path.splitext(file)[1]\nos.path.splitext(file)[1]"
+            contents = ""
+            temp_dict = self.explorerdata.DBAppendRow([abspath, dirname, basename, extension, contents], temp_dict)
+        self.explorerdata.DBImportDict(temp_dict)
     # @note
     # 今は隠しファイルヒットしないかも
     @MyLogger.deco
@@ -143,7 +158,8 @@ class ExplorerFrame(tk.Frame):
         if event.keysym == 'Return':
             if (focused := WidgetFactory.HasFocus(self.combobox['id'] , self.master.focus_get())):
                 path = self.combobox['instance'].comboboxes[focused]['instance'].GetText()
-                self.__Glob(path)
+                # self.__Glob(path)
+                self.test()
 # ===================================================================================
 if __name__ == '__main__':
     root = MyTkRoot()
