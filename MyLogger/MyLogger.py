@@ -1,16 +1,31 @@
-# ===================================================================================
+################################################################################
 import time
 import math
 import sys
 import os
+import re
 import logging
 import coloredlogs
 import inspect
 from memory_profiler import profile
 import traceback
-# ===================================================================================
+################################################################################
 ## @brief loggingクラス
 class MyLogger:
+    LEVEL_TABLE = {
+        'SPAM':5,
+        'DEBUG':10,
+        'VERBOSE':15,
+        'INFO':20,
+        'NOTICE':25,
+        'WARNING':30,
+        'SUCCESS':35,
+        'ERROR':40,
+        'CRITICAL':50,
+        'SAKURA':99
+    }
+    LEVEL_CONFIG = {}
+    ################################################################################
     ## @brief 初期化処理
     def __init__(self, level='DEBUG'):
         # ログレベル追加
@@ -73,239 +88,228 @@ class MyLogger:
         handler.setFormatter(logging.Formatter(
             '[ %(asctime)s ][ %(levelname)8s ][ %(funcName)6s ][ %(message)s ]', datefmt='%H:%M:%S'))
         logger.addHandler(handler)
-        # BrowserLogging用にHTMLフォーマットでもファイル出力
-        handler = logging.FileHandler(basedir+'/log/output.html', 'w', 'utf-8')
-        handler.setFormatter(logging.Formatter(
-            '<div>[ <span class="asctime">%(asctime)s</span> ][ <span class="levelname">%(levelname)8s</span> ][ <span class="funcName">%(funcName)6s</span> ][ <span class="%(levelname)s"> %(message)s</span> ]</div>', datefmt='%H:%M:%S'))
-        logger.addHandler(handler)
         # メンバ変数初期化
         self.stack = {}
         self.stacklevel = 0
         self.numerator = ''
         self.fraction = ''
-        # 初期化処理のログ
-        self.info('level is', level)
-        self.info(basedir+'/log/output.log')
-        self.info(basedir+'/log/output.html')
-# ===================================================================================
-    ## @brief BrowserLogging開始
-    # @note
-    # スレッド化しようと思ったけど、Errorが出たので後回し
-    # 雑にos.systemからpythonを起動
-    def StartBrowserLogging(self):
-        basedir = os.path.dirname(os.path.abspath(__file__))
-        os.system('start ' + basedir + '/BrowserLogging/BrowserLogging.py')
-        self.info('start BrowserLogging')
-# ===================================================================================
+################################################################################
     ## @brief インスタンス取得
-    # @note
-    # ログレベルは最初に呼ばれた時のもので統一される
     @classmethod
     def GetInstance(cls, level='DEBUG'):
+        filename = os.path.basename(inspect.stack()[1].filename)
         if not hasattr(cls, 'this_'):
-            cls.this_ = cls(level=level)
+            # loggingモジュールの設定としては、全ログ出力するようにしておく。
+            # MyLogger内でファイルごとに出力レベルを管理する。
+            cls.this_ = cls('SPAM')
+        if not hasattr(cls, 'LEVEL_CONFIG'):
+            cls.LEVEL_CONFIG = {}
+        # 同じファイル名は想定していない。
+        cls.LEVEL_CONFIG[filename] = level
+        cls.this_.info("set log level " + level + "(" + str(cls.LEVEL_TABLE[level]) + ") for " + filename)
+        cls.this_.sakura(cls.LEVEL_CONFIG)
         return cls.this_
-# ===================================================================================
-    ## @brief 開始ログと終了ログを出力するDecorator
-    def deco(self, func):
-        filename =os.path.basename(inspect.stack()[1].filename)
-        funcname = inspect.stack()[1].code_context[0]
-        funcname = funcname[funcname.find('def ')+4:]
-        funcname = funcname[:funcname.find('('):]
-        def decowrapper(*args,**kwargs):
-            try:
-                pwd = os.getcwd()
-                self.start(filename, funcname)
+################################################################################
+    ## @brief 開始ログと終了ログを出力するDecoratorの共通処理部
+    def decoSub(self, func, frameinfo, memory=False, *args, **kwargs):
+        try:
+            pwd = os.getcwd()
+            self.start(frameinfo)
+            if not memory:
                 ret = func(*args,**kwargs)
-                self.finish()
-                os.chdir(pwd)
-                return ret
-            except Exception as e:
-                for i in range(1,self.stacklevel+1,1):
-                    stack = self.stack[i].copy()
-                    del stack['start']
-                    self.critical(stack)
-                self.critical(type(e))
-                self.critical(e)
-                self.critical(traceback.format_exc())
-                input("press any key to exit ...")
-                sys.exit()
-        return decowrapper
-# ===================================================================================
-    ## @brief メモリ使用率表示付きDecorator
-    def decomemo(self, func):
-        filename =os.path.basename(inspect.stack()[1].filename)
-        funcname = inspect.stack()[1].code_context[0]
-        funcname = funcname[funcname.find('def ')+4:]
-        funcname = funcname[:funcname.find('('):]
-        def decowrapper(*args,**kwargs):
-            try:
-                pwd = os.getcwd()
-                self.start(filename, funcname)
+            else:
                 ret = profile(func)(*args,**kwargs)
-                self.finish()
-                os.chdir(pwd)
-                return ret
-            except Exception as e:
-                for i in range(1,self.stacklevel+1,1):
-                    stack = self.stack[i].copy()
-                    del stack['start']
-                    self.critical(stack)
-                self.critical(type(e))
-                self.critical(e)
-                self.critical(traceback.format_exc())
-                input("press any key to exit ...")
-                sys.exit()
+            self.finish()
+            os.chdir(pwd)
+            return ret
+        except Exception as e:
+            self.critical("+++++++++++++++++++++++++++++++++++")
+            for i in range(len(self.stack)):
+                stack = self.stack[i].copy()
+                del stack['start']
+                stack = list(stack.values())
+                self.critical(stack)
+            self.critical("+++++++++++++++++++++++++++++++++++")
+            self.critical(type(e))
+            self.critical(e)
+            self.critical(traceback.format_exc())
+            self.critical("+++++++++++++++++++++++++++++++++++")
+            input("press any key to exit ...")
+            sys.exit()
+################################################################################
+    ## @brief 開始ログと終了ログを出力するDecorator
+    @classmethod
+    def deco(cls, func):
+        frameinfo = inspect.stack()[1]
+        def decowrapper(*args,**kwargs):
+            cls.GetInstance().decoSub(func, frameinfo, memory=False, *args, **kwargs)
         return decowrapper
-# ===================================================================================
+################################################################################
+    ## @brief 開始ログと終了ログを出力するDecorator(memory_profile付き)
+    def decomemo(self, func):
+        frameinfo = inspect.stack()[1]
+        def decowrapper(*args,**kwargs):
+            self.decoSub(func, frameinfo, memory=True, *args, **kwargs)
+        return decowrapper
+################################################################################
     ## @brief 進捗率分子登録
     def SetNumerator(self, numerator):
         self.numerator = str(numerator)
-# ===================================================================================
+################################################################################
     ## @brief 進捗率分母登録
-    # @note
-    # 新しい分母設定時(新しいFor文の処理に移るときなどを想定)には、
-    # 分子をリセットする。
     def SetFraction(self, fraction):
-        self.numerator = ''
         self.fraction = str(fraction)
-# ===================================================================================
+################################################################################
     ## @brief 開始ログ出力
-    def start(self, filename, funcname):
-        file = filename
-        func = funcname
-        start = time.time()
-        self.stacklevel += 1
+    def start(self, frameinfo):
         self.stack[self.stacklevel] = {}
-        levelString = ''
-        for i in range(1,self.stacklevel+1,1):
-            levelString += '■'
-        levelString = (levelString+'□□□□□□□□□□')[:10]
-        self.stack[self.stacklevel]['level'] = levelString
-        self.stack[self.stacklevel]['file'] = file
-        self.stack[self.stacklevel]['func'] = func
-        self.stack[self.stacklevel]['start'] = round(start, 2)
-        stack = self.stack[self.stacklevel].copy()
-        del stack['start']
-        self.debug(stack)
-# ===================================================================================
-    ## @brief 終了ログ出力
-    def finish(self):
-        for i in range(1,self.stacklevel+1,1):
+        self.stack[self.stacklevel]['level'] = ('■' * (self.stacklevel) + '□□□□□□□□□□')[:10]
+        self.stack[self.stacklevel]['file'] = os.path.basename(frameinfo.filename)
+        self.stack[self.stacklevel]['func'] = re.sub(".*def (.*)\(.*\n", "\\1", frameinfo.code_context[0])
+        self.stack[self.stacklevel]['start'] = round(time.time(), 2)
+        for i in range(len(self.stack)):
             start = self.stack[i]['start']
             elapsedTime = round(time.time() - start, 2)
             self.stack[i]['elapsedTime'] = elapsedTime
-        stack = self.stack[self.stacklevel].copy()
-        del stack['start']
-        self.debug(stack)
+        self.stacklevel += 1
+        self.debug("+++++++++++++++++++++++++++++++++++")
+        for i in range(len(self.stack)):
+            stack = self.stack[i].copy()
+            del stack['start']
+            stack = list(stack.values())
+            if i == len(self.stack)-1:
+                self.debug("Enter >>>", stack)
+            else:
+                self.debug("         ", stack)
+        self.debug("+++++++++++++++++++++++++++++++++++")
+################################################################################
+    ## @brief 終了ログ出力
+    def finish(self):
+        for i in range(len(self.stack)):
+            start = self.stack[i]['start']
+            elapsedTime = round(time.time() - start, 2)
+            self.stack[i]['elapsedTime'] = elapsedTime
+        self.debug("+++++++++++++++++++++++++++++++++++")
+        for i in range(len(self.stack)):
+            stack = self.stack[i].copy()
+            del stack['start']
+            stack = list(stack.values())
+            if i == len(self.stack)-1:
+                self.debug("Exit  <<<", stack)
+            elif i == len(self.stack)-2:
+                self.debug("Enter >>>", stack)
+            else:
+                self.debug("         ", stack)
+        self.debug("+++++++++++++++++++++++++++++++++++")
         self.stacklevel -= 1
-# ===================================================================================
+        del self.stack[self.stacklevel]
+################################################################################
     ## @brief timeout判定
     def isTimeOut(self, timeout):
-        if not self.stacklevel in self.stack:
+        if len(self.stack) < 1:
             return False
-        start = self.stack[self.stacklevel]['start']
-        elapsedTime = round(time.time() - start, 2)
+        for i in range(len(self.stack)):
+            start = self.stack[i]['start']
+            elapsedTime = round(time.time() - start, 2)
+            self.stack[i]['elapsedTime'] = elapsedTime
+        # start = self.stack[self.stacklevel-1]['start']
+        # elapsedTime = round(time.time() - start, 2)
+        elapsedTime = self.stack[self.stacklevel-1]['elapsedTime']
         if timeout < elapsedTime:
             self.warning(elapsedTime,"/",timeout,"elapsed")
             return True
         else:
             self.info(elapsedTime,"/",timeout,"elapsed")
             return False
-# ===================================================================================
+################################################################################
+    def makeMessage(self, args, frameinfo):
+        msg = ''
+        for arg in args:
+            msg += str(arg) + " "
+        msg = '[' + frameinfo.filename + ':' + str(frameinfo.lineno) + '] ' + msg
+        msg = '[' + self.numerator + '/' + self.fraction + '] ' + msg
+        if msg.find('\n') != -1:
+            msg = msg.strip(" ")
+            msg = msg.strip("\t")
+            msg = '\n' + msg + '\n'
+        return msg
+################################################################################
+    def isNeedToLog(self, level, frameinfo):
+        return MyLogger.LEVEL_TABLE[level] >= MyLogger.LEVEL_TABLE[MyLogger.LEVEL_CONFIG[frameinfo.filename]]
+################################################################################
     ## @brief sakuraレベルログ
     def sakura(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_sakura(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("SAKURA", inspect.stack()[1]):
+            self.origin_sakura(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief criticalレベルログ
     def critical(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_critical(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("CRITICAL", inspect.stack()[1]):
+            self.origin_critical(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief errorレベルログ
     def error(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_error(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("ERROR", inspect.stack()[1]):
+            self.origin_error(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief successレベルログ
     def success(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_success(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("SUCCESS", inspect.stack()[1]):
+            self.origin_success(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief warningレベルログ
     def warning(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_warning(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("WARNING", inspect.stack()[1]):
+            self.origin_warning(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief noticeレベルログ
     def notice(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_notice(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("NOTICE", inspect.stack()[1]):
+            self.origin_notice(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief infoレベルログ
     def info(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_info(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("INFO", inspect.stack()[1]):
+            self.origin_info(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief verboseレベルログ
     def verbose(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_verbose(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("VERBOSE", inspect.stack()[1]):
+            self.origin_verbose(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief debugレベルログ
     def debug(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_debug(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("DEBUG", inspect.stack()[1]):
+            self.origin_debug(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief spamレベルログ
     def spam(self, *args, **kwargs):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        self.origin_spam(msg, **kwargs)
-# ===================================================================================
+        if self.isNeedToLog("SPAM", inspect.stack()[1]):
+            self.origin_spam(self.makeMessage(args, inspect.stack()[1]), **kwargs)
+################################################################################
     ## @brief ログ出力
     # @note
     # オリジナルログ関数を使用したときに、
     # 呼び出し元関数が良い感じにログに表示されるように
     # stacklevelを調整している。
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=3):
-        msg = msg.strip(" ")
-        msg = msg.strip("\t")
-        if self.numerator != '' and self.fraction != '':
-            msg = '[' + self.numerator + '/' + self.fraction + '] ' + msg
-        if msg.find('\n') != -1:
-            msg = '\n' + msg + '\n'
         self.origin_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
-# ===================================================================================
+################################################################################
 if __name__ == '__main__':
     MyLogger = MyLogger.GetInstance('DEBUG')
-    MyLogger.StartBrowserLogging()
+    @MyLogger.decomemo
+    def test3():
+        while not MyLogger.isTimeOut(1):
+            pass
     @MyLogger.deco
-    def test():
+    def test2():
         MyLogger.SetFraction(10)
         for i in range(10):
             MyLogger.SetNumerator(i)
             MyLogger.success('logging with progress')
+        test3()
+    @MyLogger.deco
+    def test1():
         MyLogger.sakura('This is SAKURA. (99)')
         MyLogger.critical('This is CRITICAL. (50)')
         MyLogger.error('This is ERROR. (40)')
@@ -316,5 +320,6 @@ if __name__ == '__main__':
         MyLogger.verbose('This is VERBOSE. (15)')
         MyLogger.debug('This is DEBUG. (10)')
         MyLogger.spam('This is SPAM. (5)')
-    test()
+        test2()
+    test1()
 #============================================================================================================================================================================================================================================================
