@@ -241,46 +241,40 @@ class MyLogger:
             self.level_map[filename] = "DEBUG"
         return self.LEVEL_TABLE[level]['value'] >= self.LEVEL_TABLE[self.level_map[self.block_map[filename]]]['value']
 ################################################################################
-    ## @brief 開始ログと終了ログを出力するDecoratorの共通処理部
-    def decoSub(self, func, frameinfo, memory=False, *args, **kwargs):
-        try:
-            pwd = os.getcwd()
-            self.start(frameinfo)
-            if not memory:
-                ret = func(*args,**kwargs)
-            else:
-                ret = profile(func)(*args,**kwargs)
-            self.finish()
-            os.chdir(pwd)
-            return ret
-        except Exception as e:
-            self.critical("+++++++++++++++++++++++++++++++++++")
-            for i in range(len(self.stack)):
-                stack = self.stack[i].copy()
-                del stack['start']
-                stack = list(stack.values())
-                self.CRITICAL(stack)
-            self.CRITICAL("+++++++++++++++++++++++++++++++++++")
-            self.CRITICAL(type(e))
-            self.CRITICAL(e)
-            self.CRITICAL(traceback.format_exc())
-            self.CRITICAL("+++++++++++++++++++++++++++++++++++")
-            input("press any key to exit ...")
-            sys.exit()
-################################################################################
     ## @brief 開始ログと終了ログを出力するDecorator
-    def showTrace(self, func):
-        frameinfo = inspect.stack()[2]
+    def showTrace(self, func, frameinfo=None, memory=False):
+        if frameinfo == None:
+            frameinfo = inspect.stack()[2]
         def decowrapper(*args,**kwargs):
-            self.decoSub(func, frameinfo, memory=False, *args, **kwargs)
+            try:
+                pwd = os.getcwd()
+                self.start(frameinfo)
+                if not memory:
+                    ret = func(*args,**kwargs)
+                else:
+                    ret = profile(func)(*args,**kwargs)
+                self.finish()
+                os.chdir(pwd)
+                return ret
+            except Exception as e:
+                self.critical("+++++++++++++++++++++++++++++++++++")
+                for i in range(len(self.stack)):
+                    stack = self.stack[i].copy()
+                    del stack['start']
+                    stack = list(stack.values())
+                    self.CRITICAL(stack)
+                self.CRITICAL("+++++++++++++++++++++++++++++++++++")
+                self.CRITICAL(type(e))
+                self.CRITICAL(e)
+                self.CRITICAL(traceback.format_exc())
+                self.CRITICAL("+++++++++++++++++++++++++++++++++++")
+                input("press any key to exit ...")
+                sys.exit()
         return decowrapper
 ################################################################################
     ## @brief 開始ログと終了ログを出力するDecorator(memory_profile付き)
     def showTraceAndProfile(self, func):
-        frameinfo = inspect.stack()[2]
-        def decowrapper(*args,**kwargs):
-            self.decoSub(func, frameinfo, memory=True, *args, **kwargs)
-        return decowrapper
+        return self.showTrace(func, frameinfo=inspect.stack()[2], memory=True)
 ################################################################################
     ## @brief 開始ログ出力
     def start(self, frameinfo):
