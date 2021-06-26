@@ -3,25 +3,26 @@
   <title>BrowserLogging</title>
   <style type="text/css">
     <!--
-    .asctime {color:green;}
-    .levelname {color:black;font-weight:bold;width:40px;display:inline-block;}
-    .funcName {font-weight:bold;width:60px;display:inline-block;font-size:12px;}
-    .CRITICAL {color:red;font-weight:bold;}
-    .ERROR {color:red;}
-    .SUCCESS {color:green;font-weight:bold;}
-    .WARNING {color:yellow;}
-    .NOTICE {color:magenta;}
-    .INFO {}
-    .VERBOSE {color:blue;}
-    .DEBUG {color:green;}
-    .SPAM {color:cyan;}
+    #log       {color:white;overflow:scroll;height:100%;font-size:6px;background-color:black;}
+    .asctime   {color:green;                width:5%; font-weight:bold;display:inline-block;}
+    .levelname {                              width:5%;                  display:inline-block;}
+    .funcname  {                              width:10%;font-weight:bold;display:inline-block;}
+    .SAKURA    {color:rgb(250, 53, 250);    width:60%;font-weight:bold;display:inline-block;}
+    .CRITICAL  {color:red;                  width:60%;font-weight:bold;display:inline-block;}
+    .ERROR     {color:red;                  width:60%;                 display:inline-block;}
+    .SUCCESS   {color:green;                width:60%;font-weight:bold;display:inline-block;}
+    .WARNING   {color:yellow;               width:60%;                 display:inline-block;}
+    .NOTICE    {color:magenta;              width:60%;                 display:inline-block;}
+    .INFO      {                              width:60%;                 display:inline-block;}
+    .VERBOSE   {color:blue;                 width:60%;                 display:inline-block;}
+    .DEBUG     {color:green;                width:60%;                 display:inline-block;}
+    .SPAM      {color:cyan;                 width:60%;                 display:inline-block;}
     -->
   </style>
 </head>
-<body>
-  <canvas id="screenshot" style="height:50%;" width="2880" height="1920"></canvas>
+<body >
   <input type="checkbox" id="scrollsetting" checked>自動スクロール
-  <div id="log" style="overflow:scroll;top:50%;height:50%;font-size:6px;"></div>
+  <div id="log"></div>
   <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script type="text/javascript">
     function loop() {
@@ -37,21 +38,9 @@
           $('#log').animate({ scrollTop: $('#log')[0].scrollHeight}, 2000);
         }
       };
-      var ws_screenshot = new WebSocket("ws://" + location.hostname + ":" + location.port + "/updateScreenshot");
-      ws_screenshot.binaryType = 'arraybuffer';
-      ws_screenshot.onmessage = function(msg) {
-        var ImageData_in = new Uint8Array(msg.data);
-        var ctx = $('#screenshot')[0].getContext('2d');
-        var ImageData_out = ctx.createImageData(2880, 1920);
-        /* for (var i=0; i < ImageData_in.length; i++){ */
-        for (var i=0; i < ImageData_out.data.length; i++){
-          ImageData_out.data[i] = ImageData_in[i];
-        }
-        ctx.putImageData(ImageData_out, 0, 0);
-      };
     }
     loop();
-    setInterval(loop, 3000);
+    setInterval(loop, 2000);
   </script>
 </body>
 </html>

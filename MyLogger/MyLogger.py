@@ -13,28 +13,31 @@ import traceback
 ## @brief loggingクラス
 class MyLogger:
     LEVEL_TABLE = {
-        'SPAM':5,
-        'DEBUG':10,
-        'VERBOSE':15,
-        'INFO':20,
-        'NOTICE':25,
-        'WARNING':30,
-        'SUCCESS':35,
-        'ERROR':40,
-        'CRITICAL':50,
-        'SAKURA':99
+        'spam':{'level':'SPAM', 'value':5},          'SPAM':{'level':'SPAM', 'value':5},
+        'debug':{'level':'DEBUG', 'value':10},       'DEBUG':{'level':'DEBUG', 'value':10},
+        'verbose':{'level':'VERBOSE', 'value':15},   'VERBOSE':{'level':'VERBOSE', 'value':15},
+        'info':{'level':'INFO', 'value':20},         'INFO':{'level':'INFO', 'value':20},
+        'notice':{'level':'NOTICE', 'value':25},     'NOTICE':{'level':'NOTICE', 'value':25},
+        'warning':{'level':'WARNING', 'value':30},   'WARNING':{'level':'WARNING', 'value':30},
+        'success':{'level':'SUCCESS', 'value':35},   'SUCCESS':{'level':'SUCCESS', 'value':35},
+        'error':{'level':'ERROR', 'value':40},       'ERROR':{'level':'ERROR', 'value':40},
+        'critical':{'level':'CRITICAL', 'value':50}, 'CRITICAL':{'level':'CRITICAL', 'value':50},
+        'sakura':{'level':'SAKURA', 'value':99},     'SAKURA':{'level':'SAKURA', 'value':99}
     }
-    LEVEL_CONFIG = {}
     ################################################################################
     ## @brief 初期化処理
     def __init__(self, level='DEBUG'):
+        level = self.LEVEL_TABLE[level]['level']
+        self.level_map = {}
+        self.block_map = {}
+        self.func_map = {}
         # ログレベル追加
         logger = logging.getLogger(__file__+level)
-        logging.SPAM = 5 # DEBUGの下
-        logging.VERBOSE = 15 # DEBUGとINFOの間
-        logging.NOTICE = 25 # INFOとWARNINGの間
-        logging.SUCCESS = 35 # WARNINGとERRORの間
-        logging.SAKURA = 99 # 一番上
+        logging.SPAM = self.LEVEL_TABLE['SPAM']['value']
+        logging.VERBOSE = self.LEVEL_TABLE['VERBOSE']['value']
+        logging.NOTICE = self.LEVEL_TABLE['NOTICE']['value']
+        logging.SUCCESS = self.LEVEL_TABLE['SUCCESS']['value']
+        logging.SAKURA = self.LEVEL_TABLE['SAKURA']['value']
         logging.addLevelName(logging.SPAM, 'SPAM')
         logging.addLevelName(logging.VERBOSE, 'VERBOSE')
         logging.addLevelName(logging.NOTICE, 'NOTICE')
@@ -46,16 +49,26 @@ class MyLogger:
         setattr(logger, 'success', lambda message, *args: logger._log(logging.SUCCESS, message, args))
         setattr(logger, 'sakura', lambda message, *args: logger._log(logging.SAKURA, message, args))
         # 自作ログ関数を噛ませるために、オリジナルを保存
-        self.origin_sakura = logger.sakura
-        self.origin_critical = logger.critical
-        self.origin_error = logger.error
-        self.origin_success = logger.success
-        self.origin_warning = logger.warning
-        self.origin_notice = logger.notice
-        self.origin_info = logger.info
-        self.origin_verbose = logger.verbose
-        self.origin_debug = logger.debug
-        self.origin_spam = logger.spam
+        # self.origin_sakura = logger.sakura
+        # self.origin_critical = logger.critical
+        # self.origin_error = logger.error
+        # self.origin_success = logger.success
+        # self.origin_warning = logger.warning
+        # self.origin_notice = logger.notice
+        # self.origin_info = logger.info
+        # self.origin_verbose = logger.verbose
+        # self.origin_debug = logger.debug
+        # self.origin_spam = logger.spam
+        self.func_map["SAKURA"] = logger.sakura
+        self.func_map["CRITICAL"] = logger.critical
+        self.func_map["ERROR"] = logger.error
+        self.func_map["SUCCESS"] = logger.success
+        self.func_map["WARNING"] = logger.warning
+        self.func_map["NOTICE"] = logger.notice
+        self.func_map["INFO"] = logger.info
+        self.func_map["VERBOSE"] = logger.verbose
+        self.func_map["DEBUG"] = logger.debug
+        self.func_map["SPAM"] = logger.spam
         self.origin_log = logger._log
         logger._log = self._log
         # コンソール上のログを色付け
@@ -96,19 +109,137 @@ class MyLogger:
 ################################################################################
     ## @brief インスタンス取得
     @classmethod
-    def GetInstance(cls, level='DEBUG'):
-        filename = os.path.basename(inspect.stack()[1].filename)
+    def GetInstance(cls):
+        # ファイルごとに出力レベルを管理するので、一番低いレベルを設定しておく。
         if not hasattr(cls, 'this_'):
-            # loggingモジュールの設定としては、全ログ出力するようにしておく。
-            # MyLogger内でファイルごとに出力レベルを管理する。
             cls.this_ = cls('SPAM')
-        if not hasattr(cls, 'LEVEL_CONFIG'):
-            cls.LEVEL_CONFIG = {}
-        # 同じファイル名は想定していない。
-        cls.LEVEL_CONFIG[filename] = level
-        cls.this_.info("set log level " + level + "(" + str(cls.LEVEL_TABLE[level]) + ") for " + filename)
-        cls.this_.sakura(cls.LEVEL_CONFIG)
         return cls.this_
+################################################################################
+    ## @brief ログ出力
+    # @note
+    # オリジナルログ関数を使用したときに、
+    # 呼び出し元関数が良い感じにログに表示されるように
+    # stacklevelを調整している。
+    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=4):
+        self.origin_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
+################################################################################
+    ## @brief sakuraレベルログ
+    def printLog(self, level, *args, **kwargs):
+        level = self.LEVEL_TABLE[level]['level']
+        frameinfo = inspect.stack()[2]
+        filename = os.path.basename(frameinfo.filename)
+        if self.isNeedToLog(level, filename):
+            self.func_map[level](self.makeMessage(args, filename, frameinfo.lineno))
+################################################################################
+    ## @brief sakuraレベルログ
+    def sakura(self, *args, **kwargs):
+        self.printLog("SAKURA", *args, **kwargs)
+################################################################################
+    ## @brief criticalレベルログ
+    def critical(self, *args, **kwargs):
+        self.printLog("CRITICAL", *args, **kwargs)
+################################################################################
+    ## @brief errorレベルログ
+    def error(self, *args, **kwargs):
+        self.printLog("ERROR", *args, **kwargs)
+################################################################################
+    ## @brief successレベルログ
+    def success(self, *args, **kwargs):
+        self.printLog("SUCCESS", *args, **kwargs)
+################################################################################
+    ## @brief warningレベルログ
+    def warning(self, *args, **kwargs):
+        self.printLog("WARNING", *args, **kwargs)
+################################################################################
+    ## @brief noticeレベルログ
+    def notice(self, *args, **kwargs):
+        self.printLog("NOTICE", *args, **kwargs)
+################################################################################
+    ## @brief infoレベルログ
+    def info(self, *args, **kwargs):
+        self.printLog("INFO", *args, **kwargs)
+################################################################################
+    ## @brief verboseレベルログ
+    def verbose(self, *args, **kwargs):
+        self.printLog("VERBOSE", *args, **kwargs)
+################################################################################
+    ## @brief debugレベルログ
+    def debug(self, *args, **kwargs):
+        self.printLog("DEBUG", *args, **kwargs)
+################################################################################
+    ## @brief spamレベルログ
+    def spam(self, *args, **kwargs):
+        self.printLog("SPAM", *args, **kwargs)
+################################################################################
+    ## @brief sakuraレベルログ
+    def SAKURA(self, *args, **kwargs):
+        self.printLog("SAKURA", *args, **kwargs)
+################################################################################
+    ## @brief criticalレベルログ
+    def CRITICAL(self, *args, **kwargs):
+        self.printLog("CRITICAL", *args, **kwargs)
+################################################################################
+    ## @brief errorレベルログ
+    def ERROR(self, *args, **kwargs):
+        self.printLog("ERROR", *args, **kwargs)
+################################################################################
+    ## @brief successレベルログ
+    def SUCCESS(self, *args, **kwargs):
+        self.printLog("SUCCESS", *args, **kwargs)
+################################################################################
+    ## @brief warningレベルログ
+    def WARNING(self, *args, **kwargs):
+        self.printLog("WARNING", *args, **kwargs)
+################################################################################
+    ## @brief noticeレベルログ
+    def NOTICE(self, *args, **kwargs):
+        self.printLog("NOTICE", *args, **kwargs)
+################################################################################
+    ## @brief infoレベルログ
+    def INFO(self, *args, **kwargs):
+        self.printLog("INFO", *args, **kwargs)
+################################################################################
+    ## @brief verboseレベルログ
+    def VERBOSE(self, *args, **kwargs):
+        self.printLog("VERBOSE", *args, **kwargs)
+################################################################################
+    ## @brief debugレベルログ
+    def DEBUG(self, *args, **kwargs):
+        self.printLog("DEBUG", *args, **kwargs)
+################################################################################
+    ## @brief spamレベルログ
+    def SPAM(self, *args, **kwargs):
+        self.printLog("SPAM", *args, **kwargs)
+################################################################################
+    def makeMessage(self, args, filename, lineno):
+        msg = ''
+        for arg in args:
+            msg += str(arg) + " "
+        msg = '[' + filename + ':' + str(lineno) + '] ' + msg
+        msg = '[' + self.numerator + '/' + self.fraction + '] ' + msg
+        if msg.find('\n') != -1:
+            msg = msg.strip(" ")
+            msg = msg.strip("\t")
+            msg = '\n' + msg + '\n'
+        return msg
+################################################################################
+    ## @brief インスタンス取得
+    def setLogLevel(self, level='DEBUG', block=""):
+        level = self.LEVEL_TABLE[level]['level']
+        filename = os.path.basename(inspect.stack()[2].filename)
+        if block == "":
+            block = filename
+        self.block_map[filename] = block
+        # 同じファイル名は想定していない。
+        self.level_map[block] = level
+        self.INFO("set log level " + level + "(" + str(self.LEVEL_TABLE[level]['value']) + ") for " + block)
+        self.SAKURA(self.level_map)
+################################################################################
+    def isNeedToLog(self, level, filename):
+        if filename not in self.block_map:
+            self.block_map[filename] = filename
+            self.level_map[filename] = "DEBUG"
+        return self.LEVEL_TABLE[level]['value'] >= self.LEVEL_TABLE[self.level_map[self.block_map[filename]]]['value']
 ################################################################################
     ## @brief 開始ログと終了ログを出力するDecoratorの共通処理部
     def decoSub(self, func, frameinfo, memory=False, *args, **kwargs):
@@ -128,37 +259,28 @@ class MyLogger:
                 stack = self.stack[i].copy()
                 del stack['start']
                 stack = list(stack.values())
-                self.critical(stack)
-            self.critical("+++++++++++++++++++++++++++++++++++")
-            self.critical(type(e))
-            self.critical(e)
-            self.critical(traceback.format_exc())
-            self.critical("+++++++++++++++++++++++++++++++++++")
+                self.CRITICAL(stack)
+            self.CRITICAL("+++++++++++++++++++++++++++++++++++")
+            self.CRITICAL(type(e))
+            self.CRITICAL(e)
+            self.CRITICAL(traceback.format_exc())
+            self.CRITICAL("+++++++++++++++++++++++++++++++++++")
             input("press any key to exit ...")
             sys.exit()
 ################################################################################
     ## @brief 開始ログと終了ログを出力するDecorator
-    @classmethod
-    def deco(cls, func):
-        frameinfo = inspect.stack()[1]
+    def showTrace(self, func):
+        frameinfo = inspect.stack()[2]
         def decowrapper(*args,**kwargs):
-            cls.GetInstance().decoSub(func, frameinfo, memory=False, *args, **kwargs)
+            self.decoSub(func, frameinfo, memory=False, *args, **kwargs)
         return decowrapper
 ################################################################################
     ## @brief 開始ログと終了ログを出力するDecorator(memory_profile付き)
-    def decomemo(self, func):
-        frameinfo = inspect.stack()[1]
+    def showTraceAndProfile(self, func):
+        frameinfo = inspect.stack()[2]
         def decowrapper(*args,**kwargs):
             self.decoSub(func, frameinfo, memory=True, *args, **kwargs)
         return decowrapper
-################################################################################
-    ## @brief 進捗率分子登録
-    def SetNumerator(self, numerator):
-        self.numerator = str(numerator)
-################################################################################
-    ## @brief 進捗率分母登録
-    def SetFraction(self, fraction):
-        self.fraction = str(fraction)
 ################################################################################
     ## @brief 開始ログ出力
     def start(self, frameinfo):
@@ -172,16 +294,16 @@ class MyLogger:
             elapsedTime = round(time.time() - start, 2)
             self.stack[i]['elapsedTime'] = elapsedTime
         self.stacklevel += 1
-        self.debug("+++++++++++++++++++++++++++++++++++")
+        self.DEBUG("+++++++++++++++++++++++++++++++++++")
         for i in range(len(self.stack)):
             stack = self.stack[i].copy()
             del stack['start']
             stack = list(stack.values())
             if i == len(self.stack)-1:
-                self.debug("Enter >>>", stack)
+                self.DEBUG("Enter >>>", stack)
             else:
-                self.debug("         ", stack)
-        self.debug("+++++++++++++++++++++++++++++++++++")
+                self.DEBUG("         ", stack)
+        self.DEBUG("+++++++++++++++++++++++++++++++++++")
 ################################################################################
     ## @brief 終了ログ出力
     def finish(self):
@@ -189,137 +311,55 @@ class MyLogger:
             start = self.stack[i]['start']
             elapsedTime = round(time.time() - start, 2)
             self.stack[i]['elapsedTime'] = elapsedTime
-        self.debug("+++++++++++++++++++++++++++++++++++")
+        self.DEBUG("+++++++++++++++++++++++++++++++++++")
         for i in range(len(self.stack)):
             stack = self.stack[i].copy()
             del stack['start']
             stack = list(stack.values())
             if i == len(self.stack)-1:
-                self.debug("Exit  <<<", stack)
+                self.DEBUG("Exit  <<<", stack)
             elif i == len(self.stack)-2:
-                self.debug("Enter >>>", stack)
+                self.DEBUG("Enter >>>", stack)
             else:
-                self.debug("         ", stack)
-        self.debug("+++++++++++++++++++++++++++++++++++")
+                self.DEBUG("         ", stack)
+        self.DEBUG("+++++++++++++++++++++++++++++++++++")
         self.stacklevel -= 1
         del self.stack[self.stacklevel]
 ################################################################################
+    ## @brief 進捗率登録
+    def setProgress(self, numerator, fraction):
+        self.numerator = str(numerator)
+        self.fraction = str(fraction)
+################################################################################
     ## @brief timeout判定
-    def isTimeOut(self, timeout):
+    def isElapsed(self, second):
         if len(self.stack) < 1:
             return False
         for i in range(len(self.stack)):
             start = self.stack[i]['start']
             elapsedTime = round(time.time() - start, 2)
             self.stack[i]['elapsedTime'] = elapsedTime
-        # start = self.stack[self.stacklevel-1]['start']
-        # elapsedTime = round(time.time() - start, 2)
         elapsedTime = self.stack[self.stacklevel-1]['elapsedTime']
-        if timeout < elapsedTime:
-            self.warning(elapsedTime,"/",timeout,"elapsed")
+        if second < elapsedTime:
+            self.WARNING(elapsedTime,"/",second,"elapsed")
             return True
         else:
-            self.info(elapsedTime,"/",timeout,"elapsed")
+            self.INFO(elapsedTime,"/",second,"elapsed")
             return False
-################################################################################
-    def makeMessage(self, args, frameinfo):
-        msg = ''
-        for arg in args:
-            msg += str(arg) + " "
-        msg = '[' + frameinfo.filename + ':' + str(frameinfo.lineno) + '] ' + msg
-        msg = '[' + self.numerator + '/' + self.fraction + '] ' + msg
-        if msg.find('\n') != -1:
-            msg = msg.strip(" ")
-            msg = msg.strip("\t")
-            msg = '\n' + msg + '\n'
-        return msg
-################################################################################
-    def isNeedToLog(self, level, frameinfo):
-        return MyLogger.LEVEL_TABLE[level] >= MyLogger.LEVEL_TABLE[MyLogger.LEVEL_CONFIG[frameinfo.filename]]
-################################################################################
-    ## @brief sakuraレベルログ
-    def sakura(self, *args, **kwargs):
-        if self.isNeedToLog("SAKURA", inspect.stack()[1]):
-            self.origin_sakura(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief criticalレベルログ
-    def critical(self, *args, **kwargs):
-        if self.isNeedToLog("CRITICAL", inspect.stack()[1]):
-            self.origin_critical(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief errorレベルログ
-    def error(self, *args, **kwargs):
-        if self.isNeedToLog("ERROR", inspect.stack()[1]):
-            self.origin_error(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief successレベルログ
-    def success(self, *args, **kwargs):
-        if self.isNeedToLog("SUCCESS", inspect.stack()[1]):
-            self.origin_success(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief warningレベルログ
-    def warning(self, *args, **kwargs):
-        if self.isNeedToLog("WARNING", inspect.stack()[1]):
-            self.origin_warning(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief noticeレベルログ
-    def notice(self, *args, **kwargs):
-        if self.isNeedToLog("NOTICE", inspect.stack()[1]):
-            self.origin_notice(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief infoレベルログ
-    def info(self, *args, **kwargs):
-        if self.isNeedToLog("INFO", inspect.stack()[1]):
-            self.origin_info(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief verboseレベルログ
-    def verbose(self, *args, **kwargs):
-        if self.isNeedToLog("VERBOSE", inspect.stack()[1]):
-            self.origin_verbose(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief debugレベルログ
-    def debug(self, *args, **kwargs):
-        if self.isNeedToLog("DEBUG", inspect.stack()[1]):
-            self.origin_debug(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief spamレベルログ
-    def spam(self, *args, **kwargs):
-        if self.isNeedToLog("SPAM", inspect.stack()[1]):
-            self.origin_spam(self.makeMessage(args, inspect.stack()[1]), **kwargs)
-################################################################################
-    ## @brief ログ出力
-    # @note
-    # オリジナルログ関数を使用したときに、
-    # 呼び出し元関数が良い感じにログに表示されるように
-    # stacklevelを調整している。
-    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=3):
-        self.origin_log(level, msg, args, exc_info, extra, stack_info, stacklevel)
-################################################################################
-if __name__ == '__main__':
-    MyLogger = MyLogger.GetInstance('DEBUG')
-    @MyLogger.decomemo
-    def test3():
-        while not MyLogger.isTimeOut(1):
-            pass
-    @MyLogger.deco
-    def test2():
-        MyLogger.SetFraction(10)
-        for i in range(10):
-            MyLogger.SetNumerator(i)
-            MyLogger.success('logging with progress')
-        test3()
-    @MyLogger.deco
-    def test1():
-        MyLogger.sakura('This is SAKURA. (99)')
-        MyLogger.critical('This is CRITICAL. (50)')
-        MyLogger.error('This is ERROR. (40)')
-        MyLogger.success('This is SUCCESS. (35)')
-        MyLogger.warning('This is WARNING. (30)')
-        MyLogger.notice('This is NOTICE. (25)')
-        MyLogger.info('This is INFO. (20)')
-        MyLogger.verbose('This is VERBOSE. (15)')
-        MyLogger.debug('This is DEBUG. (10)')
-        MyLogger.spam('This is SPAM. (5)')
-        test2()
-    test1()
-#============================================================================================================================================================================================================================================================
+###############################################################################
+    ## @brief sleep
+    def sleep(self, second):
+        if second <= 0:
+            self.ERROR("argument second is negative or zero")
+        else:
+            span = 3
+            start = round(time.time(), 2)
+            prev = -999
+            while 1:
+                elapsed = round(time.time() - start, 2)
+                if elapsed - prev > span:
+                    self.DEBUG("time sleeping " + str(elapsed) + " / " + str(second))
+                    prev = elapsed
+                    if elapsed >= second:
+                        break
+###############################################################################
