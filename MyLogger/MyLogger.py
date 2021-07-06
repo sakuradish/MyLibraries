@@ -102,7 +102,7 @@ class MyLogger:
             '[ %(asctime)s ][ %(levelname)8s ][ %(funcName)6s ][ %(message)s ]', datefmt='%H:%M:%S'))
         logger.addHandler(handler)
         # メンバ変数初期化
-        self.stack = {}
+        self.stacks = {}
         self.stacklevel = 0
         self.numerator = ''
         self.fraction = ''
@@ -258,8 +258,8 @@ class MyLogger:
                 return ret
             except Exception as e:
                 self.critical("+++++++++++++++++++++++++++++++++++")
-                for i in range(len(self.stack)):
-                    stack = self.stack[i].copy()
+                for i in range(len(self.stacks)):
+                    stack = self.stacks[i].copy()
                     del stack['start']
                     stack = list(stack.values())
                     self.CRITICAL(stack)
@@ -278,47 +278,51 @@ class MyLogger:
 ################################################################################
     ## @brief 開始ログ出力
     def start(self, frameinfo):
-        self.stack[self.stacklevel] = {}
-        self.stack[self.stacklevel]['level'] = ('■' * (self.stacklevel) + '□□□□□□□□□□')[:10]
-        self.stack[self.stacklevel]['file'] = os.path.basename(frameinfo.filename)
-        self.stack[self.stacklevel]['func'] = re.sub(".*def (.*)\(.*\n", "\\1", frameinfo.code_context[0])
-        self.stack[self.stacklevel]['start'] = round(time.time(), 2)
-        for i in range(len(self.stack)):
-            start = self.stack[i]['start']
+        self.stacks[self.stacklevel] = {}
+        self.stacks[self.stacklevel]['level'] = ('■' * (self.stacklevel) + '□□□□□□□□□□')[:10]
+        self.stacks[self.stacklevel]['file'] = os.path.basename(frameinfo.filename)
+        self.stacks[self.stacklevel]['func'] = re.sub(".*def (.*?)\(.*\n", "\\1", frameinfo.code_context[0])
+        self.stacks[self.stacklevel]['start'] = round(time.time(), 2)
+        for i in range(len(self.stacks)):
+            start = self.stacks[i]['start']
             elapsedTime = round(time.time() - start, 2)
-            self.stack[i]['elapsedTime'] = elapsedTime
+            self.stacks[i]['elapsedTime'] = elapsedTime
         self.stacklevel += 1
-        self.DEBUG("+++++++++++++++++++++++++++++++++++")
-        for i in range(len(self.stack)):
-            stack = self.stack[i].copy()
-            del stack['start']
-            stack = list(stack.values())
-            if i == len(self.stack)-1:
-                self.DEBUG("Enter >>>", stack)
-            else:
-                self.DEBUG("         ", stack)
-        self.DEBUG("+++++++++++++++++++++++++++++++++++")
+        # 最終呼び出し元がログ出力対象の場合
+        if self.isNeedToLog("DEBUG", self.stacks[self.stacklevel-1]['file']):
+            self.DEBUG("+++++++++++++++++++++++++++++++++++")
+            for i in range(len(self.stacks)):
+                stack = self.stacks[i].copy()
+                del stack['start']
+                stack = list(stack.values())
+                if i == len(self.stacks)-1:
+                    self.DEBUG("Enter >>>", stack)
+                else:
+                    self.DEBUG("         ", stack)
+            self.DEBUG("+++++++++++++++++++++++++++++++++++")
 ################################################################################
     ## @brief 終了ログ出力
     def finish(self):
-        for i in range(len(self.stack)):
-            start = self.stack[i]['start']
+        for i in range(len(self.stacks)):
+            start = self.stacks[i]['start']
             elapsedTime = round(time.time() - start, 2)
-            self.stack[i]['elapsedTime'] = elapsedTime
-        self.DEBUG("+++++++++++++++++++++++++++++++++++")
-        for i in range(len(self.stack)):
-            stack = self.stack[i].copy()
-            del stack['start']
-            stack = list(stack.values())
-            if i == len(self.stack)-1:
-                self.DEBUG("Exit  <<<", stack)
-            elif i == len(self.stack)-2:
-                self.DEBUG("Enter >>>", stack)
-            else:
-                self.DEBUG("         ", stack)
-        self.DEBUG("+++++++++++++++++++++++++++++++++++")
+            self.stacks[i]['elapsedTime'] = elapsedTime
+        # 最終呼び出し元がログ出力対象の場合
+        if self.isNeedToLog("DEBUG", self.stacks[self.stacklevel-1]['file']):
+            self.DEBUG("+++++++++++++++++++++++++++++++++++")
+            for i in range(len(self.stacks)):
+                stack = self.stacks[i].copy()
+                del stack['start']
+                stack = list(stack.values())
+                if i == len(self.stacks)-1:
+                    self.DEBUG("Exit  <<<", stack)
+                elif i == len(self.stacks)-2:
+                    self.DEBUG("Enter >>>", stack)
+                else:
+                    self.DEBUG("         ", stack)
+            self.DEBUG("+++++++++++++++++++++++++++++++++++")
         self.stacklevel -= 1
-        del self.stack[self.stacklevel]
+        del self.stacks[self.stacklevel]
 ################################################################################
     ## @brief 進捗率登録
     def setProgress(self, numerator, fraction):
@@ -327,13 +331,13 @@ class MyLogger:
 ################################################################################
     ## @brief timeout判定
     def isElapsed(self, second):
-        if len(self.stack) < 1:
+        if len(self.stacks) < 1:
             return False
-        for i in range(len(self.stack)):
-            start = self.stack[i]['start']
+        for i in range(len(self.stacks)):
+            start = self.stacks[i]['start']
             elapsedTime = round(time.time() - start, 2)
-            self.stack[i]['elapsedTime'] = elapsedTime
-        elapsedTime = self.stack[self.stacklevel-1]['elapsedTime']
+            self.stacks[i]['elapsedTime'] = elapsedTime
+        elapsedTime = self.stacks[self.stacklevel-1]['elapsedTime']
         if second < elapsedTime:
             self.WARNING(elapsedTime,"/",second,"elapsed")
             return True
@@ -341,12 +345,22 @@ class MyLogger:
             self.INFO(elapsedTime,"/",second,"elapsed")
             return False
 ###############################################################################
+## @brief getElapsedTime
+    def getElapsedTime(self):
+        for i in range(len(self.stacks)):
+            start = self.stacks[i]['start']
+            elapsedTime = round(time.time() - start, 2)
+            self.stacks[i]['elapsedTime'] = elapsedTime
+        return self.stacks[self.stacklevel-1]['elapsedTime']
+###############################################################################
     ## @brief sleep
     def sleep(self, second):
         if second <= 0:
             self.ERROR("argument second is negative or zero")
         else:
             span = 3
+            if span > second:
+                span = second
             start = round(time.time(), 2)
             prev = -999
             while 1:

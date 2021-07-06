@@ -19,6 +19,10 @@ def isElapsed(second):
     return MyLogger.GetInstance().isElapsed(second)
 ################################################################################
 ## @brief インスタンス取得
+def getElapsedTime():
+    return MyLogger.GetInstance().getElapsedTime()
+################################################################################
+## @brief インスタンス取得
 def setLogLevel(level='DEBUG'):
     MyLogger.GetInstance().setLogLevel(level)
 ################################################################################
