@@ -167,10 +167,48 @@ class entity:
     def getName(self):
         return self.name
 ###############################################################################
+class svgBase():
+    def __init__(self,x,y,w,h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.parent = None
+        self.childs = []
+    def setParent(self,parent):
+        if self.parent:
+            critical("parent is already set")
+        self.parent = parent
+    def addChild(self,child):
+        self.childs.append(child)
+    def getMaxRight(self):
+        if self.childs == []:
+            return self.x+self.w
+        else:
+            return max([self.x+self.w+child.getMaxRight() for child in self.childs])
+    def getMaxBottom(self):
+        if self.childs == []:
+            return self.y+self.h
+        else:
+            return max([self.y+self.h+child.getMaxBottom() for child in self.childs])
+    def draw(self):
+        success(self.x,self.y,self.w,self.h)
+        self.w = self.getMaxRight()
+        self.h = self.getMaxRight()
+        sakura(self.x,self.y,self.w,self.h)
+###############################################################################
 if __name__ == '__main__':
-    Bob = entity("Bob")
-    Alice = entity("Alice")
-    Bob.call(Alice, "Hello")
-    Bob.call(Alice, "GoodBye")
-    sequenceManager.draw()
+    # Bob = entity("Bob")
+    # Alice = entity("Alice")
+    # Bob.call(Alice, "Hello")
+    # Bob.call(Alice, "GoodBye")
+    # sequenceManager.draw()
+    parent = svgBase(100,0,0,0)
+    child1 = svgBase(100,0,100,200)
+    child2 = svgBase(200,0,100,200)
+    parent.addChild(child1)
+    parent.addChild(child2)
+    parent.draw()
+    child1.draw()
+    child2.draw()
 ###############################################################################
